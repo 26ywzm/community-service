@@ -76,4 +76,78 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// 获取和更新用户信息的 API
+
+// 获取用户信息
+router.get('/profile', async (req, res) => {
+  const token = req.headers['authorization'];
+  
+  if (!token) {
+    return res.status(401).json({ message: '未提供 token' });
+  }
+
+  try {
+    // 验证 token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    // 查询用户信息
+    const [rows] = await pool.query('SELECT username, email FROM users WHERE id = ?', [userId]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    // 返回用户信息
+    const user = rows[0];
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 更新用户信息
+router.put('/profile', async (req, res) => {
+  const token = req.headers['authorization'];
+  
+  if (!token) {
+    return res.status(401).json({ message: '未提供 token' });
+  }
+
+  try {
+    // 验证 token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    const { username, email, password } = req.body;
+
+    // 检查必填字段
+    if (!username || !email) {
+      return res.status(400).json({ message: '用户名和邮箱是必填字段' });
+    }
+
+    // 如果提供了新密码，则加密它
+    let hashedPassword = null;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    // 更新用户信息
+    const updateQuery = password
+      ? 'UPDATE users SET username = ?, email = ?, password = ? WHERE id = ?'
+      : 'UPDATE users SET username = ?, email = ? WHERE id = ?';
+
+    const updateValues = password
+      ? [username, email, hashedPassword, userId]
+      : [username, email, userId];
+
+    await pool.query(updateQuery, updateValues);
+
+    res.status(200).json({ message: '用户信息已更新' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
 module.exports = router;
