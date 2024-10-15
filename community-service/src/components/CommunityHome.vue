@@ -28,15 +28,6 @@
         </li>
       </ul>
     </section>
-
-    <!-- 底部导航栏（手机设备） -->
-    <nav v-if="isMobile" class="bottom-nav">
-      <ul>
-        <li><router-link to="/">首页</router-link></li>
-        <li><router-link to="/discover">发现</router-link></li>
-        <li><router-link to="/profile">我的</router-link></li>
-      </ul>
-    </nav>
   </div>
 </template>
 
