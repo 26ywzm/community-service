@@ -1,16 +1,6 @@
+<!-- CommunityHome.vue -->
 <template>
   <div class="home-container">
-    <!-- 顶部导航栏（桌面和平板设备） -->
-    <nav v-if="!isMobile" class="top-nav" :class="{ 'nav-hidden': isNavHidden }">
-      <div class="logo">社区服务</div>
-      <ul>
-        <li><router-link to="/">首页</router-link></li>
-        <li><router-link to="/discover">发现</router-link></li>
-        <li><router-link to="/profile">我的</router-link></li>
-      </ul>
-      <div class="toggle-button" v-if="isNavHidden" @click="toggleNav">☰</div>
-    </nav>
-
     <!-- 轮播图 -->
     <div class="carousel">
       <img :src="carouselImages[currentImage]" alt="轮播图" />

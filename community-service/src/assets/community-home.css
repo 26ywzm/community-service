@@ -7,42 +7,6 @@
     padding: 20px;
   }
   
-  /* 顶部导航栏样式（桌面和平板设备） */
-  .top-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: #333;
-    color: white;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 1000;
-    transition: top 0.3s;
-  }
-  
-  .nav-hidden {
-    top: -60px; /* 隐藏导航栏 */
-  }
-  
-  .top-nav ul {
-    display: flex;
-    list-style: none;
-  }
-  
-  .top-nav ul li a {
-    color: white;
-    text-decoration: none;
-    margin-right: 20px;
-  }
-  
-  .toggle-button {
-    cursor: pointer;
-    display: none;
-  }
-  
   /* 轮播图样式 */
   .carousel {
     position: relative;
@@ -118,41 +82,4 @@
     margin-bottom: 10px;
   }
   
-  /* 底部导航栏样式（手机设备） */
-  .bottom-nav {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background-color: #333;
-    color: white;
-    z-index: 1000;
-  }
-  
-  .bottom-nav ul {
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-  }
-  
-  .bottom-nav ul li a {
-    color: white;
-    text-decoration: none;
-  }
-  
-  /* 响应式设计 */
-  @media (max-width: 768px) {
-    .top-nav {
-      display: none; /* 隐藏顶部导航栏 */
-    }
-  
-    .toggle-button {
-      display: block; /* 显示导航栏切换按钮 */
-    }
-  
-    .bottom-nav {
-      display: block; /* 显示底部导航栏 */
-    }
-  }
   
