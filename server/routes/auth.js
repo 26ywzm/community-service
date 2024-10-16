@@ -150,4 +150,37 @@ router.put('/profile', async (req, res) => {
     res.status(500).json({ message: '服务器错误' });
   }
 });
+
+// 获取轮播图 API
+router.get('/carousel-images', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM carousel_images');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('获取轮播图失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取热门新闻 API
+router.get('/hot-news', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM hot_news');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('获取热门新闻失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取新闻列表 API
+router.get('/news-list', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM news_list');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('获取新闻列表失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
 module.exports = router;
