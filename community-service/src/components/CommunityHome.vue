@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <!-- 轮播图 -->
-    <div class="carousel">
+    <div class="carousel" @mouseenter="pauseCarousel" @mouseleave="startCarousel">
       <img :src="carouselImages[currentImage]" alt="轮播图" />
       <button @click="prevImage">‹</button>
       <button @click="nextImage">›</button>
@@ -95,6 +95,10 @@ export default {
       }, 3000); // 每 3 秒切换一次
     },
 
+    pauseCarousel() {
+      clearInterval(this.intervalId); // 鼠标悬停时暂停
+    },
+    
     toggleNav() {
       this.isNavHidden = !this.isNavHidden;
     },
