@@ -42,6 +42,8 @@ export default {
       carouselImages: [], // 轮播图数据
       hotNews: [],        // 热门新闻数据
       newsList: [],       // 新闻列表数据
+      currentImage: 0,    // 当前显示的轮播图索引
+      intervalId: null,    // 用于存储定时器 ID
     };
   },
   mounted() {
@@ -51,6 +53,10 @@ export default {
     this.fetchCarouselImages(); // 获取轮播图数据
     this.fetchHotNews();        // 获取热门新闻数据
     this.fetchNewsList();       // 获取新闻列表数据
+    this.startCarousel();       // 启动轮播图定时器
+  },
+  beforeUnmount() {
+    clearInterval(this.intervalId); // 组件销毁时清除定时器
   },
   methods: {
     ...communityHome.methods,
@@ -81,6 +87,12 @@ export default {
       } catch (error) {
         console.error('获取新闻列表失败:', error);
       }
+    },
+
+    startCarousel() {
+      this.intervalId = setInterval(() => {
+        this.nextImage(); // 定时切换到下一张图片
+      }, 3000); // 每 3 秒切换一次
     },
 
     toggleNav() {
