@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'; // 使用 Vue 3 的
 import CommunityHome from '@/components/CommunityHome.vue';
 import UserLogin from '@/components/UserLogin.vue';
 import UserRegister from '@/components/UserRegister.vue';
-import UserDiscover from '@/components/Discover.vue';
+import UserDiscover from '@/components/DiscoverPage.vue';
 import UserProfile from '@/components/Profile.vue';
 
 // 创建路由

@@ -63,9 +63,11 @@ export default {
     },
     logout() {
       localStorage.removeItem('authToken'); // 清除 token
+      localStorage.removeItem('userRole'); // 清除角色信息
+      localStorage.removeItem('username'); // 清除用户名
       this.isLoggedIn = false;
       alert('已退出登录');
-      this.$router.push('/');
+      this.$router.push('/'); //跳转
     },
     async fetchUserProfile() {
       const token = localStorage.getItem('authToken');
@@ -121,7 +123,7 @@ export default {
       this.editProfile = false;
       this.newPassword = ''; // 清除新密码字段
       this.fetchUserProfile(); // 重新获取用户信息，恢复原始数据
-    },
+    }, 
   },
   mounted() {
     this.fetchUserProfile(); // 页面加载时调用 API 获取用户信息

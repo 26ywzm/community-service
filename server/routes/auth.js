@@ -19,17 +19,20 @@ const pool = mysql.createPool({
 
 // 用户注册
 router.post('/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, role } = req.body; // 允许传递 role
 
   if (!username || !email || !password) {
     return res.status(400).json({ message: '请填写所有必填字段' });
   }
 
+  // 确定角色，默认为 'user'
+  const userRole = role === 'super_admin' ? 'super_admin' : 'user';
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10); // 加密密码
 
     // 插入新用户
-    const [rows] = await pool.query('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword]);
+    const [rows] = await pool.query('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [username, email, hashedPassword, userRole]);
     
     res.status(201).json({ message: '注册成功' });
   } catch (error) {
@@ -66,10 +69,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: '密码错误' });
     }
 
-    // 生成 JWT
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // 生成 JWT，包括用户角色信息
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    res.status(200).json({ message: '登录成功', token });
+    res.status(200).json({ message: '登录成功', token, role: user.role });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: '服务器错误' });
@@ -180,6 +183,54 @@ router.get('/news-list', async (req, res) => {
     res.status(200).json(rows);
   } catch (error) {
     console.error('获取新闻列表失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取用户列表
+router.get('/users', async (req, res) => {
+  try {
+    const [users] = await pool.query('SELECT * FROM users WHERE role = "user"');
+    res.status(200).json(users);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取管理员列表
+router.get('/admins', async (req, res) => {
+  try {
+    const [admins] = await pool.query('SELECT * FROM users WHERE role = "admin"');
+    res.status(200).json(admins);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 升级用户为管理员
+router.post('/promote/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    await pool.query('UPDATE users SET role = "admin" WHERE id = ?', [userId]);
+    res.status(200).json({ message: '用户已升级为管理员' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 降级管理员为用户
+router.post('/demote/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    await pool.query('UPDATE users SET role = "user" WHERE id = ?', [userId]);
+    res.status(200).json({ message: '管理员已降级为用户' });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ message: '服务器错误' });
   }
 });

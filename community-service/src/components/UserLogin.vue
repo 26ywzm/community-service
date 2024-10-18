@@ -37,6 +37,9 @@ export default {
         // 登录成功后的操作
         alert(response.data.message);
         localStorage.setItem('authToken', response.data.token); // 保存 token
+        localStorage.setItem('userRole', response.data.role); // 保存角色信息
+        localStorage.setItem('username', this.email); // 也可以保存用户名
+        
         this.$router.push('/profile'); // 跳转到用户个人中心页面
       } catch (error) {
         console.error('Login error:', error);
