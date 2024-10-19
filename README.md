@@ -71,4 +71,15 @@ INSERT INTO news_list (title, content, image_url) VALUES
 ('新闻条目2', '这是新闻条目2的详细内容。', 'http://example.com/news2.jpg'),
 ('新闻条目3', '这是新闻条目3的详细内容。', 'http://example.com/news3.jpg');
 
+### 从新更新数据表
+CREATE TABLE articles (
+    id INT AUTO_INCREMENT PRIMARY KEY,       -- 唯一标识符，自动递增
+    title VARCHAR(255) NOT NULL,             -- 文章标题
+    content TEXT,                            -- 文章内容
+    image_url VARCHAR(255),                  -- 新闻相关图片链接
+    category ENUM('carousel', 'hotNews', 'newsList') NOT NULL,  -- 文章类型
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
+);
+
 

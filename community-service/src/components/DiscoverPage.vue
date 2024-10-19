@@ -6,6 +6,12 @@
       <button @click="showAdminPanel = true">管理模块</button>
     </div>
     
+    <div v-if="isSuperAdmin || isAdmin">
+      <router-link to="/articles/new">
+        <button>文章编写</button>
+      </router-link>
+    </div>
+
     <div v-if="showAdminPanel" class="admin-panel">
       <h3>管理员和用户列表</h3>
       <button @click="showAdminPanel = false">关闭</button>

@@ -9,14 +9,14 @@
 
     <!-- 热门新闻 -->
     <section class="hot-news">
-      <h2>热门新闻</h2>
-      <div class="hot-news-grid">
-        <div v-for="news in hotNews" :key="news.id" class="news-item">
-          <img :src="news.image_url" alt="新闻图片" />
-          <p>{{ news.title }}</p>
-          <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">查看详情</router-link> <!-- 添加链接 -->
-        </div>
+    <h2>热门新闻</h2>
+    <div class="hot-news-grid">
+      <div v-for="news in hotNews" :key="news.id" class="news-item">
+        <img :src="news.image_url" alt="新闻图片" />
+        <p>{{ news.title }}</p>
+        <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">查看详情</router-link>
       </div>
+    </div>
     </section>
 
     <!-- 新闻列表 -->
@@ -64,9 +64,8 @@ export default {
 
     async fetchCarouselImages() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/carousel-images');
-        console.log(response.data); // 调试输出
-        this.carouselImages = response.data.map(image => image.image_url); // 将数据存储为图片URL
+        const response = await axios.get('http://localhost:3000/api/auth/articles?category=carousel'); // 修改为新 API
+        this.carouselImages = response.data.map(article => article.image_url);
       } catch (error) {
         console.error('获取轮播图失败:', error);
       }
@@ -74,8 +73,8 @@ export default {
 
     async fetchHotNews() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/hot-news');
-        this.hotNews = response.data; // 存储返回的数据
+        const response = await axios.get('http://localhost:3000/api/auth/articles?category=hotNews'); // 修改为新 API
+        this.hotNews = response.data;
       } catch (error) {
         console.error('获取热门新闻失败:', error);
       }
@@ -83,8 +82,8 @@ export default {
 
     async fetchNewsList() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/news-list');
-        this.newsList = response.data; // 存储返回的数据
+        const response = await axios.get('http://localhost:3000/api/auth/articles?category=newsList'); // 修改为新 API
+        this.newsList = response.data;
       } catch (error) {
         console.error('获取新闻列表失败:', error);
       }

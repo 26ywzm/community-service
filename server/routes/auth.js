@@ -250,4 +250,50 @@ router.get('/news/:id', async (req, res) => {
   }
 });
 
+// 发布文章
+router.post('/articles', async (req, res) => {
+  const { title, content, image_url, category } = req.body;
+  
+  // 确保当选择为轮播图时必须提供图片
+  if (category === 'carousel' && !image_url) {
+    return res.status(400).json({ message: '轮播图必须有图片' });
+  }
+
+  try {
+    await pool.query('INSERT INTO articles (title, content, image_url, category) VALUES (?, ?, ?, ?)', 
+      [title, content, image_url, category]);
+    res.status(201).json({ message: '文章发布成功' });
+  } catch (error) {
+    console.error('发布文章失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取特定类别的文章
+router.get('/articles', async (req, res) => {
+  const category = req.query.category; // 从查询参数获取类别
+  try {
+    const [rows] = await pool.query('SELECT * FROM articles WHERE category = ?', [category]);
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('获取文章失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取文章详情
+router.get('/articles/:id', async (req, res) => {
+  const articleId = req.params.id;
+  try {
+    const [rows] = await pool.query('SELECT * FROM articles WHERE id = ?', [articleId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '文章未找到' });
+    }
+    res.status(200).json(rows[0]); // 返回文章详情
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 module.exports = router;
