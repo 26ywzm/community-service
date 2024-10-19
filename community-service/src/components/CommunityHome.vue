@@ -2,7 +2,9 @@
   <div class="home-container">
     <!-- 轮播图 -->
     <div class="carousel" @mouseenter="pauseCarousel" @mouseleave="startCarousel">
-      <img :src="carouselImages[currentImage]" alt="轮播图" />
+      <router-link v-if="carouselImages.length > 0" :to="{ name: 'NewsDetail', params: { id: carouselImages[currentImage].id } }">
+        <img :src="carouselImages[currentImage].image_url" alt="轮播图" class="carousel-image" />
+      </router-link>
       <button @click="prevImage">‹</button>
       <button @click="nextImage">›</button>
     </div>
@@ -12,9 +14,10 @@
     <h2>热门新闻</h2>
     <div class="hot-news-grid">
       <div v-for="news in hotNews" :key="news.id" class="news-item">
-        <img :src="news.image_url" alt="新闻图片" />
+        <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">
+            <img :src="news.image_url" alt="新闻图片" class="news-image" />
+        </router-link>
         <p>{{ news.title }}</p>
-        <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">查看详情</router-link>
       </div>
     </div>
     </section>
@@ -63,13 +66,18 @@ export default {
     ...communityHome.methods,
 
     async fetchCarouselImages() {
-      try {
-        const response = await axios.get('http://localhost:3000/api/auth/articles?category=carousel'); // 修改为新 API
-        this.carouselImages = response.data.map(article => article.image_url);
-      } catch (error) {
-        console.error('获取轮播图失败:', error);
-      }
-    },
+  try {
+    const response = await axios.get('http://localhost:3000/api/auth/articles?category=carousel');
+    // 确保 response.data 是一个数组，并且每个对象都包含 id 和 image_url
+    this.carouselImages = response.data.map(article => ({
+      id: article.id,        // 确保你在这里获取到 id
+      image_url: article.image_url // 获取图片链接
+    }));
+    console.log('轮播图数据:', this.carouselImages); // 检查数据结构
+  } catch (error) {
+    console.error('获取轮播图失败:', error);
+  }
+},
 
     async fetchHotNews() {
       try {
@@ -103,16 +111,20 @@ export default {
       this.isNavHidden = !this.isNavHidden;
     },
 
-    prevImage() {
-      this.currentImage = (this.currentImage + this.carouselImages.length - 1) % this.carouselImages.length;
-    },
     nextImage() {
-      this.currentImage = (this.currentImage + 1) % this.carouselImages.length;
+      if (this.carouselImages.length > 0) {
+        this.currentImage = (this.currentImage + 1) % this.carouselImages.length;
+      }
+    },
+    prevImage() {
+      if (this.carouselImages.length > 0) {
+          this.currentImage = (this.currentImage + this.carouselImages.length - 1) % this.carouselImages.length;
+      }
     },
   },
 };
 </script>
 
 <style scoped>
-@import '@/assets/community-home.css';
+  @import '@/assets/community-home.css';
 </style>

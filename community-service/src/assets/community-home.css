@@ -81,5 +81,31 @@
   .news-list li {
     margin-bottom: 10px;
   }
+/* 轮播图 */
+  .carousel {
+    position: relative;
+    width: 100%; /* 或者指定一个具体的宽度，比如 800px */
+    height: 400px; /* 设置轮播图高度 */
+    overflow: hidden; /* 确保溢出部分被隐藏 */
+  }
   
+  .carousel-image {
+    width: 100%; /* 图片宽度填满容器 */
+    height: 100%; /* 图片高度填满容器 */
+    object-fit: cover; /* 确保图片按比例缩放并覆盖整个容器 */
+  }
   
+  .hot-news-grid {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .news-item {
+    margin: 10px;
+  }
+/* 热门新闻 */
+.news-image {
+  width: 100%; /* 设置图片宽度为100% */
+  height: auto; /* 高度自适应 */
+  cursor: pointer; /* 鼠标悬浮时显示手型 */
+}
