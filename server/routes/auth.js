@@ -234,4 +234,20 @@ router.post('/demote/:id', async (req, res) => {
     res.status(500).json({ message: '服务器错误' });
   }
 });
+
+// 获取新闻详情
+router.get('/news/:id', async (req, res) => {
+  const newsId = req.params.id;
+  try {
+    const [rows] = await pool.query('SELECT * FROM news_list WHERE id = ?', [newsId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '新闻未找到' });
+    }
+    res.status(200).json(rows[0]); // 返回新闻详情
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 module.exports = router;

@@ -8,7 +8,9 @@ npm install express mysql2 cors body-parser
 后端启动：node app.js
 
 轮播图 API: GET http://localhost:3000/api/carousel-images
+
 热门新闻 API: GET http://localhost:3000/api/hot-news
+
 新闻列表 API: GET http://localhost:3000/api/news-list
 ## Mysql 连接
 ### 轮播图新闻表 (carousel_images)

@@ -14,19 +14,20 @@
         <div v-for="news in hotNews" :key="news.id" class="news-item">
           <img :src="news.image_url" alt="新闻图片" />
           <p>{{ news.title }}</p>
+          <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">查看详情</router-link> <!-- 添加链接 -->
         </div>
       </div>
     </section>
 
     <!-- 新闻列表 -->
     <section class="news-list">
-      <h2>新闻列表</h2>
-      <ul>
-        <li v-for="news in newsList" :key="news.id">
-          <a href="#">{{ news.title }}</a>
-        </li>
-      </ul>
-    </section>
+    <h2>新闻列表</h2>
+    <ul>
+      <li v-for="news in newsList" :key="news.id">
+        <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">{{ news.title }}</router-link>
+      </li>
+    </ul>
+  </section>
   </div>
 </template>
 
@@ -98,7 +99,7 @@ export default {
     pauseCarousel() {
       clearInterval(this.intervalId); // 鼠标悬停时暂停
     },
-    
+
     toggleNav() {
       this.isNavHidden = !this.isNavHidden;
     },
