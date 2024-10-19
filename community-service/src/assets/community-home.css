@@ -2,110 +2,123 @@
 
 /* 通用样式 */
 .home-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  
-  /* 轮播图样式 */
-  .carousel {
-    position: relative;
-    text-align: center;
-    margin: 60px 0;
-  }
-  
-  .carousel img {
-    width: 100%;
-    max-height: 400px;
-    object-fit: cover;
-  }
-  
-  .carousel button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-  }
-  
-  .carousel button:nth-child(2) {
-    left: 10px;
-  }
-  
-  .carousel button:nth-child(3) {
-    right: 10px;
-  }
-  
-  /* 热门新闻样式 */
-  .hot-news {
-    margin-bottom: 40px;
-  }
-  
-  .hot-news-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-  }
-  
-  .news-item {
-    flex: 1;
-    min-width: 250px;
-    background-color: #f5f5f5;
-    padding: 15px;
-    text-align: center;
-    border-radius: 10px;
-  }
-  
-  .news-item img {
-    width: 100%;
-    height: auto;
-    border-radius: 5px;
-  }
-  
-  .news-item p {
-    margin-top: 10px;
-  }
-  
-  /* 新闻列表样式 */
-  .news-list {
-    margin-bottom: 40px;
-  }
-  
-  .news-list ul {
-    list-style: none;
-  }
-  
-  .news-list li {
-    margin-bottom: 10px;
-  }
-/* 轮播图 */
-  .carousel {
-    position: relative;
-    width: 100%; /* 或者指定一个具体的宽度，比如 800px */
-    height: 400px; /* 设置轮播图高度 */
-    overflow: hidden; /* 确保溢出部分被隐藏 */
-  }
-  
-  .carousel-image {
-    width: 100%; /* 图片宽度填满容器 */
-    height: 100%; /* 图片高度填满容器 */
-    object-fit: cover; /* 确保图片按比例缩放并覆盖整个容器 */
-  }
-  
-  .hot-news-grid {
-    display: flex;
-    flex-wrap: wrap;
-  }
-  
-  .news-item {
-    margin: 10px;
-  }
-/* 热门新闻 */
-.news-image {
-  width: 100%; /* 设置图片宽度为100% */
-  height: auto; /* 高度自适应 */
-  cursor: pointer; /* 鼠标悬浮时显示手型 */
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* 轮播图样式 */
+.carousel {
+  position: relative;
+  text-align: center;
+  margin: 60px 0;
+  border-radius: 10px; /* 圆角 */
+  overflow: hidden; /* 确保溢出部分被隐藏 */
+}
+
+.carousel img {
+  width: 100%;
+  max-height: 400px;
+  object-fit: cover;
+}
+
+.carousel button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s ease; /* 背景色过渡 */
+}
+
+.carousel button:hover {
+  background: rgba(0, 0, 0, 0.8); /* 悬停时的背景色 */
+}
+
+.carousel button:nth-child(2) {
+  left: 10px;
+}
+
+.carousel button:nth-child(3) {
+  right: 10px;
+}
+
+/* 热门新闻样式 */
+.hot-news {
+  margin-bottom: 40px;
+}
+
+.hot-news-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.news-item {
+  flex: 1;
+  min-width: 250px;
+  background-color: #f5f5f5;
+  padding: 15px;
+  text-align: center;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 阴影 */
+}
+
+.news-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+
+.news-item p {
+  margin-top: 10px;
+}
+
+/* 新闻列表样式 */
+.news-list {
+  padding: 20px;
+  background-color: #f4f4f4; /* 背景色 */
+  border-radius: 8px; /* 圆角 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 阴影 */
+  margin-top: 20px;
+  margin-bottom: 14%;
+}
+
+.news-list h2 {
+  font-size: 24px;
+  color: #333;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.news-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.news-list li {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  margin: 10px 0;
+  padding: 10px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.news-list li:hover {
+  background-color: #e9f5ff;
+  transform: translateY(-2px);
+}
+
+.news-list a {
+  text-decoration: none;
+  color: #007bff; /* 链接颜色 */
+  font-size: 18px;
+}
+
+.news-list a:hover {
+  text-decoration: underline; /* 悬停时下划线 */
 }

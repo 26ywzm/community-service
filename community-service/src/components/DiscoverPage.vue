@@ -101,9 +101,103 @@ export default {
 </script>
 
 <style scoped>
+.discover {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.title {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.button-group {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.admin-button,
+.article-button,
+.close-button,
+.action-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 5px;
+}
+
+.admin-button:hover,
+.article-button:hover,
+.close-button:hover,
+.action-button:hover {
+  background-color: #0056b3;
+}
+
 .admin-panel {
   border: 1px solid #ccc;
-  padding: 10px;
+  padding: 15px;
   margin-top: 20px;
+  border-radius: 8px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h3 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+h4 {
+  margin-top: 10px;
+  color: #555;
+}
+
+.list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.list li:last-child {
+  border-bottom: none;
+}
+/* 按钮 */
+.admin-button,
+.article-button,
+.close-button,
+.action-button {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 15px 30px; /* 增大按钮的内边距 */
+  border-radius: 8px; /* 增加圆角 */
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 5px;
+  font-size: 18px; /* 增大字体大小 */
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
+}
+
+.admin-button:hover,
+.article-button:hover,
+.close-button:hover,
+.action-button:hover {
+  background: linear-gradient(135deg, #0056b3, #004494);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
 }
 </style>
+
