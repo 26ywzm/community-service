@@ -2,14 +2,29 @@
 <template>
   <div class="discover">
     <h2>发现</h2>
+
+    <!-- 检查用户是否已登录 -->
+    <div v-if="isLoggedIn">
+    <!-- 普通用户可以看到的订餐按钮 -->
+    <div v-if="!isAdmin && !isSuperAdmin">
+      <router-link to="/canteen">
+        <button>进入社区食堂订餐系统</button>
+      </router-link>
+    </div>
+
+    <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
     <div v-if="isAdmin || isSuperAdmin">
-      <button @click="showAdminPanel = true">管理模块</button>
+      <button @click="showAdminPanel = true">管理食堂模块</button>
     </div>
     
     <div v-if="isSuperAdmin || isAdmin">
       <router-link to="/articles/new">
         <button>文章编写</button>
       </router-link>
+    </div>
+
+    <div v-if="isAdmin || isSuperAdmin">
+      <button @click="showAdminPanel = true">管理模块</button>
     </div>
 
     <div v-if="showAdminPanel" class="admin-panel">
@@ -38,7 +53,14 @@
         </ul>
       </div>
     </div>
+    </div>
+    <!-- 未登录用户 -->
+    <div v-else>
+      <p>请登录以查看内容。</p>
+    </div>
   </div>
+
+  
 </template>
 
 
@@ -54,6 +76,9 @@ export default {
     };
   },
   computed: {
+    isLoggedIn() {
+      return !!localStorage.getItem('authToken'); // 检查是否有 token
+    },
     // 计算属性，用于检查用户是否为管理员或超级管理员
     isAdmin() {
       const role = localStorage.getItem('userRole');
@@ -95,21 +120,21 @@ export default {
     }
   },
   mounted() {
-    // if (this.isAdmin || this.isSuperAdmin) {
-    //   this.fetchUsers();
-    //   this.fetchAdmins();
-    // }
-    // 修改
-    // 检查用户是否已登录
-    if (!this.isAuthenticated) {
-      // 如果未登录，隐藏模块
-      this.showAdminPanel = false; // 确保管理员面板不显示
-      return; // 退出
-    }
     if (this.isAdmin || this.isSuperAdmin) {
       this.fetchUsers();
       this.fetchAdmins();
     }
+    // 修改
+    // 检查用户是否已登录
+    // if (!this.isAuthenticated) {
+    //   // 如果未登录，隐藏模块
+    //   this.showAdminPanel = false; // 确保管理员面板不显示
+    //   return; // 退出
+    // }
+    // if (this.isAdmin || this.isSuperAdmin) {
+    //   this.fetchUsers();
+    //   this.fetchAdmins();
+    // }
   }
 };
 </script>

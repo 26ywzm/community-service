@@ -296,4 +296,67 @@ router.get('/articles/:id', async (req, res) => {
   }
 });
 
+// 获取菜单
+router.get('/canteen/menu', async (req, res) => {
+  try {
+    const [menuItems] = await pool.query('SELECT * FROM menu_items WHERE available = TRUE');
+    res.status(200).json(menuItems);
+  } catch (error) {
+    console.error('获取菜单失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 处理订单
+router.post('/canteen/order', async (req, res) => {
+  const { menu_item_id, quantity } = req.body;
+  const token = req.headers['authorization'];
+
+  if (!token) {
+    return res.status(401).json({ message: '未提供 token' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id; // 从 token 中获取用户 ID
+
+    await pool.query('INSERT INTO orders (user_id, menu_item_id, quantity) VALUES (?, ?, ?)', [userId, menu_item_id, quantity]);
+    res.status(201).json({ message: '订单创建成功' });
+  } catch (error) {
+    console.error('创建订单失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 添加菜单项
+router.post('/canteen/menu', async (req, res) => {
+  const { name, description, price, image_url } = req.body;
+
+  if (!name || !description || !price) {
+    return res.status(400).json({ message: '请填写所有必填字段' });
+  }
+
+  try {
+    await pool.query('INSERT INTO menu_items (name, description, price, image_url) VALUES (?, ?, ?, ?)', 
+      [name, description, price, image_url]);
+    res.status(201).json({ message: '菜单项添加成功' });
+  } catch (error) {
+    console.error('添加菜单项失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 删除菜单项
+router.delete('/canteen/menu/:id', async (req, res) => {
+  const menuItemId = req.params.id;
+
+  try {
+    await pool.query('DELETE FROM menu_items WHERE id = ?', [menuItemId]);
+    res.status(200).json({ message: '菜单项删除成功' });
+  } catch (error) {
+    console.error('删除菜单项失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
 module.exports = router;
