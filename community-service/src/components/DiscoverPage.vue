@@ -62,7 +62,10 @@ export default {
     isSuperAdmin() {
       const role = localStorage.getItem('userRole');
       return role === 'super_admin'; // 仅超级管理员
-    }
+    },
+    isAuthenticated() {
+      return !!localStorage.getItem('authToken'); // 检查是否登录
+    },
   },
   methods: {
     async fetchUsers() {
@@ -92,6 +95,17 @@ export default {
     }
   },
   mounted() {
+    // if (this.isAdmin || this.isSuperAdmin) {
+    //   this.fetchUsers();
+    //   this.fetchAdmins();
+    // }
+    // 修改
+    // 检查用户是否已登录
+    if (!this.isAuthenticated) {
+      // 如果未登录，隐藏模块
+      this.showAdminPanel = false; // 确保管理员面板不显示
+      return; // 退出
+    }
     if (this.isAdmin || this.isSuperAdmin) {
       this.fetchUsers();
       this.fetchAdmins();
