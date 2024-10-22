@@ -5,62 +5,75 @@
 
     <!-- 检查用户是否已登录 -->
     <div v-if="isLoggedIn">
-    <!-- 普通用户可以看到的订餐按钮 -->
-    <div v-if="!isAdmin && !isSuperAdmin">
-      <router-link to="/canteen">
-        <button>进入社区食堂订餐系统</button>
-      </router-link>
-    </div>
 
-    <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
-    <div v-if="isAdmin || isSuperAdmin">
-      <button @click="showAdminPanel = true">管理食堂模块</button>
-    </div>
-    
-    <div v-if="isSuperAdmin || isAdmin">
-      <router-link to="/articles/new">
-        <button>文章编写</button>
-      </router-link>
-    </div>
-
-    <div v-if="isAdmin || isSuperAdmin">
-      <button @click="showAdminPanel = true">管理模块</button>
-    </div>
-
-    <div v-if="showAdminPanel" class="admin-panel">
-      <h3>管理员和用户列表</h3>
-      <button @click="showAdminPanel = false">关闭</button>
-      <div>
-        <h4>管理员列表</h4>
-        <ul>
-          <li v-for="admin in admins" :key="admin.id">
-            {{ admin.username }}
-            <span v-if="isSuperAdmin"> <!-- 仅超级管理员可以降级 -->
-              <button @click="demoteUser(admin.id)">降为用户</button>
-            </span>
-          </li>
-        </ul>
+      <!-- 普通用户可以看到的订餐按钮 -->
+      <div v-if="!isAdmin && !isSuperAdmin">
+        <router-link to="/CanteenOrder">
+          <button>社区食堂</button>
+        </router-link>
       </div>
-      <div>
-        <h4>用户列表</h4>
-        <ul>
-          <li v-for="user in users" :key="user.id">
-            {{ user.username }}
-            <span v-if="isSuperAdmin"> <!-- 仅超级管理员可以升级 -->
-              <button @click="promoteUser(user.id)">升为管理员</button>
-            </span>
-          </li>
-        </ul>
+
+      <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
+
+      <div v-if="isSuperAdmin || isAdmin">
+        <router-link to="/articles/new">
+          <button>文章编写</button>
+        </router-link>
+      </div>
+
+      <div v-if="isAdmin || isSuperAdmin">
+        <button @click="showAdminPanel = true">管理模块</button>
+      </div>
+
+      <div v-if="showAdminPanel" class="admin-panel">
+        <h3>管理员和用户列表</h3>
+        <button @click="showAdminPanel = false">关闭</button>
+        <div>
+          <h4>管理员列表</h4>
+          <ul>
+            <li v-for="admin in admins" :key="admin.id">
+              {{ admin.username }}
+              <span v-if="isSuperAdmin"> <!-- 仅超级管理员可以降级 -->
+                <button @click="demoteUser(admin.id)">降为用户</button>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4>用户列表</h4>
+          <ul>
+            <li v-for="user in users" :key="user.id">
+              {{ user.username }}
+              <span v-if="isSuperAdmin"> <!-- 仅超级管理员可以升级 -->
+                <button @click="promoteUser(user.id)">升为管理员</button>
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <!-- 管理员和超级管理员的食堂管理按钮 -->
+      <div v-if="isAdmin || isSuperAdmin">
+        <router-link to="/canteenadmin">
+          <button>食堂管理</button>
+        </router-link>
+      </div>
+      <!-- 订单管理 -->
+      <div v-if="isAdmin || isSuperAdmin">
+        <router-link to="/canteen/orders">
+          <button>订单管理</button>
+        </router-link>
       </div>
     </div>
-    </div>
+
+
+
     <!-- 未登录用户 -->
     <div v-else>
       <p>请登录以查看内容。</p>
     </div>
   </div>
 
-  
+
 </template>
 
 
@@ -95,7 +108,6 @@ export default {
   methods: {
     async fetchUsers() {
       const response = await axios.get('http://localhost:3000/api/auth/users');
-      console.log('用户列表:', response.data); // 输出用户列表
       this.users = response.data;
     },
     async fetchAdmins() {
@@ -124,17 +136,6 @@ export default {
       this.fetchUsers();
       this.fetchAdmins();
     }
-    // 修改
-    // 检查用户是否已登录
-    // if (!this.isAuthenticated) {
-    //   // 如果未登录，隐藏模块
-    //   this.showAdminPanel = false; // 确保管理员面板不显示
-    //   return; // 退出
-    // }
-    // if (this.isAdmin || this.isSuperAdmin) {
-    //   this.fetchUsers();
-    //   this.fetchAdmins();
-    // }
   }
 };
 </script>
@@ -213,6 +214,7 @@ h4 {
 .list li:last-child {
   border-bottom: none;
 }
+
 /* 按钮 */
 .admin-button,
 .article-button,
@@ -221,12 +223,15 @@ h4 {
   background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   border: none;
-  padding: 15px 30px; /* 增大按钮的内边距 */
-  border-radius: 8px; /* 增加圆角 */
+  padding: 15px 30px;
+  /* 增大按钮的内边距 */
+  border-radius: 8px;
+  /* 增加圆角 */
   cursor: pointer;
   transition: all 0.3s ease;
   margin: 5px;
-  font-size: 18px; /* 增大字体大小 */
+  font-size: 18px;
+  /* 增大字体大小 */
   box-shadow: 0 4px 8px rgba(0, 123, 255, 0.2);
 }
 
@@ -239,4 +244,3 @@ h4 {
   box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
 }
 </style>
-
