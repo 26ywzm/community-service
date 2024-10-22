@@ -1,20 +1,20 @@
 <template>
   <div class="profile-container">
     <h2>我的账户</h2>
-    
+
     <div v-if="!isLoggedIn" class="auth-section">
       <p>请先登录或注册以查看您的个人信息。</p>
       <button class="auth-button" @click="goToLogin">登录</button>
       <button class="auth-button register-button" @click="goToRegister">注册</button>
     </div>
-    
+
     <div v-else class="profile-section">
       <h3>欢迎, {{ user.username }}</h3>
       <p>邮箱: {{ user.email }}</p>
-      
+
       <!-- 编辑按钮 -->
       <button class="edit-button" @click="editProfile = true" v-if="!editProfile">编辑信息</button>
-      
+
       <!-- 编辑表单 -->
       <div v-if="editProfile">
         <div class="form-group">
@@ -123,7 +123,7 @@ export default {
       this.editProfile = false;
       this.newPassword = ''; // 清除新密码字段
       this.fetchUserProfile(); // 重新获取用户信息，恢复原始数据
-    }, 
+    },
   },
   mounted() {
     this.fetchUserProfile(); // 页面加载时调用 API 获取用户信息
@@ -153,7 +153,11 @@ h2 {
 }
 
 /* 按钮样式 */
-.auth-button, .save-button, .cancel-button, .logout-button, .edit-button {
+.auth-button,
+.save-button,
+.cancel-button,
+.logout-button,
+.edit-button {
   background-color: #007bff;
   color: white;
   padding: 10px 20px;
@@ -165,7 +169,11 @@ h2 {
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-.auth-button:hover, .save-button:hover, .cancel-button:hover, .logout-button:hover, .edit-button:hover {
+.auth-button:hover,
+.save-button:hover,
+.cancel-button:hover,
+.logout-button:hover,
+.edit-button:hover {
   background-color: #0056b3;
   transform: translateY(-2px);
 }
