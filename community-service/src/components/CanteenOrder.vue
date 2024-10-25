@@ -75,31 +75,78 @@ export default {
 <style scoped>
 .canteen-order {
   padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
 }
 
 .menu-item {
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative; /* 绝对定位子元素 */
 }
 
-img {
-  max-width: 100px;
-  margin-right: 20px;
+.menu-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
-button {
-  background-color: #4CAF50;
+.item-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.item-info {
+  text-align: center;
+  padding: 15px;
+}
+
+.price {
+  color: #e74c3c;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.order-btn {
+  background-color: #42b983;
   color: white;
   border: none;
-  padding: 10px;
-  cursor: pointer;
+  padding: 10px 20px;
   border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  position: absolute; /* 绝对定位 */
+  bottom: 15px; /* 距离底部 15px */
+  left: 50%; /* 水平中心 */
+  transform: translateX(-50%); /* 调整水平中心偏移 */
 }
 
-button:hover {
-  background-color: #45a049;
+.order-btn:hover {
+  background-color: #369d73;
+}
+
+button:active {
+  background-color: #2b805d;
 }
 </style>

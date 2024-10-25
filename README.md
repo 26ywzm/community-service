@@ -23,6 +23,30 @@
 > node app.js
 
 #### API设计
+用户注册 API：GST http://localhost:3000/api/auth/register
+
+用户登录 API：GST http://localhost:3000/api/auth/login
+
+获取用户 API: GST HTTP://localhost:3000/api/auth//profile
+
+获取用户列表 API: GST HTTP://localhost:3000/api/auth/users
+
+获取管理员列表 API: GST HTTP://localhost:3000/api/auth/admins
+
+升为管理员 API: GET HTTP://localhost:3000/api/auth/promote/:id 
+
+降为用户 API: GET HTTP://localhost:3000/api/auth//demote/:id
+
+获取新闻详细 API: GET HTTP://localhost:3000/api/auth/news/:id
+
+发布新闻 API: GET HTTP://localhost:3000/api/auth/articles
+
+获取文章详细 API: GET HTTP://localhost:3000/api/auth//articles/:id
+
+获取菜单 API GET HTTP://localhost:3000/api/auth/canteen/menu
+
+处理订单 API GET HTTP://localhost:3000/api/auth/canteen/order
+
 轮播图 API: GET http://localhost:3000/api/carousel-images
 
 热门新闻 API: GET http://localhost:3000/api/hot-news
@@ -31,12 +55,12 @@
 
 ## Mysql 连接
 ### 用户表
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(255),
-  password VARCHAR(255),
-  email VARCHAR(255)
-);
+> CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255),
+    password VARCHAR(255),
+    email VARCHAR(255)
+    );
 
 ### 文章数据表
 CREATE TABLE articles (

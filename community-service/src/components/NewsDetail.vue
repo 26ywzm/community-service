@@ -39,6 +39,58 @@ export default {
 
 <style scoped>
 .news-detail {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
   padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 28px;
+}
+
+img {
+  display: block;
+  margin: 0 auto 20px;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+p {
+  line-height: 1.6;
+  font-size: 18px;
+  color: #444;
+  margin-bottom: 20px;
+  text-align: justify;
+}
+
+button {
+  background-color: #42b983;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #369d73;
+}
+
+button:active {
+  background-color: #2b805d;
 }
 </style>
