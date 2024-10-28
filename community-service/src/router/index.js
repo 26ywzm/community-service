@@ -6,6 +6,9 @@ import UserDiscover from '@/components/DiscoverPage.vue';
 import UserProfile from '@/components/Profile.vue';
 import NewsDetail from '@/components/NewsDetail.vue'; // 导入新闻详情组件
 import ArticleEditor from '@/components/ArticleEditor.vue'; // 导入文章编写组件
+import CanteenOrder from '@/components/CanteenOrder.vue'; // 导入订餐组件
+import CanteenAdmin from '@/components/CanteenAdmin.vue';
+import OrderDetail from '@/components/OrderDetail.vue';
 
 // 创建路由
 const routes = [
@@ -16,6 +19,9 @@ const routes = [
   { path: '/discover', name: 'Discover', component: UserDiscover },
   { path: '/news/:id', name: 'NewsDetail', component: NewsDetail }, // 添加新闻详情的路由
   { path: '/articles/new', name: 'ArticleEditor', component: ArticleEditor }, // 添加文章编写的路由
+  { path: '/canteenorder', name: 'CanteenOrder', component: CanteenOrder },
+  { path: '/canteenadmin', name: 'CanteenAdmin', component: CanteenAdmin },
+  { path: '/order/:orderId',name: 'OrderDetail',component: OrderDetail,},
 ];
 
 // 创建 router 实例

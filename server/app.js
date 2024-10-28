@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 
 // 初始化 dotenv 配置
+require('dotenv').config();
 dotenv.config();
 
 const app = express(); // 初始化 app

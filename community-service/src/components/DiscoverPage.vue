@@ -13,6 +13,13 @@
         </router-link>
       </div>
 
+      <!-- 用户的订单详细按钮 -->
+      <div>
+        <router-link to="/order/${orderId}">
+          <button>查看我的订单</button> <!-- 新增按钮 -->
+        </router-link>
+      </div>
+
       <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
 
       <div v-if="isSuperAdmin || isAdmin">
@@ -51,14 +58,25 @@
           </ul>
         </div>
       </div>
-      
-
-
-
-    <!-- 未登录用户 -->
-    <div v-else>
-      <p>请登录以查看内容。</p>
+      <!-- 管理员和超级管理员的食堂管理按钮 -->
+      <div v-if="isAdmin || isSuperAdmin">
+        <router-link to="/canteenadmin">
+          <button>食堂管理</button>
+        </router-link>
+      </div>
+      <!-- 订单管理 -->
+      <div v-if="isAdmin || isSuperAdmin">
+        <router-link to="/canteen/orders">
+          <button>订单管理</button>
+        </router-link>
+      </div>
     </div>
+
+
+  <!-- 未登录用户 -->
+  <div v-else>
+    <p>请登录以查看内容。</p>
+  </div>
   </div>
 
 

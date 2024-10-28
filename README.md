@@ -77,8 +77,41 @@ CREATE TABLE articles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
 );
 
+### 菜品表 (menu_items)：
+CREATE TABLE menu_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,              -- 菜品名称
+    description TEXT,                         -- 菜品描述
+    price DECIMAL(10, 2) NOT NULL,           -- 菜品价格
+    image_url VARCHAR(255),                   -- 菜品图片链接
+    available BOOLEAN DEFAULT TRUE,           -- 菜品是否在售
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 创建时间
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
+);
+
+### 订单表 (orders) 包含外键约束：
+CREATE TABLE orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,                     -- 关联用户
+    total_price DECIMAL(10, 2) NOT NULL,     -- 总价格
+    status ENUM('pending', 'confirmed', 'completed', 'cancelled') DEFAULT 'pending', -- 订单状态
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, -- 更新时间
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE -- 关联用户
+);
 
 
-
+### 订单详细信息
+CREATE TABLE order_details (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,                     -- 关联订单
+    menu_item_id INT NOT NULL,                 -- 关联菜单项
+    quantity INT NOT NULL,                      -- 订购数量
+    price DECIMAL(10, 2) NOT NULL,             -- 菜品单价
+    total_price DECIMAL(10, 2) NOT NULL,       -- 菜品总价 (可选)
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,  -- 关联订单
+    FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE -- 关联菜单项
+);
 
 

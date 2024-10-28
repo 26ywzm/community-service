@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
+const authenticateToken = require('../middleware/auth'); // 导入中间件
 
 dotenv.config();
 
@@ -292,6 +293,152 @@ router.get('/articles/:id', async (req, res) => {
     res.status(200).json(rows[0]); // 返回文章详情
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取所有可用的菜品
+router.get('/canteen/menu', async (req, res) => {
+  try {
+    const [menuItems] = await pool.query('SELECT * FROM menu_items WHERE available = TRUE');
+    res.status(200).json(menuItems);
+  } catch (error) {
+    console.error('获取菜单失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 添加菜品
+router.post('/canteen/menu', async (req, res) => {
+  const { name, price, image_url, description } = req.body;
+
+  try {
+    await pool.query('INSERT INTO menu_items (name, price, image_url, description) VALUES (?, ?, ?, ?)', 
+      [name, price, image_url, description]);
+    res.status(201).json({ message: '菜品添加成功' });
+  } catch (error) {
+    console.error('添加菜品失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 更新菜品
+router.put('/canteen/menu/:id', async (req, res) => {
+  const menuItemId = req.params.id;
+  const { name, price, image_url, description } = req.body;
+
+  try {
+    await pool.query('UPDATE menu_items SET name = ?, price = ?, image_url = ?, description = ? WHERE id = ?', 
+      [name, price, image_url, description, menuItemId]);
+    res.status(200).json({ message: '菜品更新成功' });
+  } catch (error) {
+    console.error('更新菜品失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 删除菜品
+router.delete('/canteen/menu/:id', async (req, res) => {
+  const menuItemId = req.params.id;
+
+  try {
+    await pool.query('DELETE FROM menu_items WHERE id = ?', [menuItemId]);
+    res.status(200).json({ message: '菜品已删除' });
+  } catch (error) {
+    console.error('删除菜品失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 添加订单
+router.post('/canteen/order', authenticateToken, async (req, res) => {
+  const { items } = req.body;
+  const userId = req.user.id; // 获取用户ID
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ message: '订单不能为空' });
+  }
+
+  try {
+    // 开始一个事务
+    await pool.query('START TRANSACTION');
+    
+    // 计算总价格
+    const totalPrice = items.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0);
+
+    // 创建订单记录
+    const [orderResult] = await pool.query('INSERT INTO orders (user_id, total_price) VALUES (?, ?)', [
+      userId,
+      totalPrice
+    ]);
+
+    const orderId = orderResult.insertId;
+
+    // 添加每个菜品到订单项
+    for (const item of items) {
+      const itemTotalPrice = parseFloat(item.price) * item.quantity; // 计算总价
+      await pool.query('INSERT INTO order_details (order_id, menu_item_id, quantity, price, total_price) VALUES (?, ?, ?, ?, ?)', [
+        orderId,
+        item.menu_item_id,
+        item.quantity,
+        parseFloat(item.price), // 确保价格是数值类型
+        itemTotalPrice // 传入菜品总价
+      ]);
+    }
+
+    // 提交事务
+    await pool.query('COMMIT');
+    res.status(201).json({ message: '订单创建成功', orderId });
+  } catch (error) {
+    console.error('创建订单失败:', error);
+    await pool.query('ROLLBACK'); // 回滚事务
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+
+
+// 获取订单详情
+router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
+  const orderId = req.params.id;
+  const userId = req.user.id; // 获取用户ID
+
+  console.log(`Fetching details for orderId: ${orderId} for userId: ${userId}`); // 添加调试日志
+  
+  try {
+    const [orderDetails] = await pool.query(
+      `SELECT o.id, o.created_at, o.total_price, oi.menu_item_id, oi.quantity, oi.total_price AS item_total, 
+              m.name AS menu_item_name, m.price AS menu_item_price 
+       FROM orders o
+       JOIN order_details oi ON o.id = oi.order_id
+       JOIN menu_items m ON oi.menu_item_id = m.id
+       WHERE o.id = ? AND o.user_id = ?`,
+      [orderId, userId]
+    );
+
+    if (orderDetails.length === 0) {
+      return res.status(404).json({ message: '订单未找到' });
+    }
+
+    // 格式化返回数据
+    const formattedOrder = {
+      id: orderDetails[0].id,
+      created_at: orderDetails[0].created_at,
+      total_price: orderDetails[0].total_price,
+      details: orderDetails.map(item => ({
+        menu_item: {
+          id: item.menu_item_id,
+          name: item.menu_item_name,
+          price: item.menu_item_price
+        },
+        quantity: item.quantity,
+        total_price: item.item_total // 修复这里，使用 item.item_total
+      }))
+    };
+
+    res.status(200).json(formattedOrder);
+  } catch (error) {
+    console.error('获取订单详情失败:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
