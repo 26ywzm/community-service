@@ -51,19 +51,7 @@
           </ul>
         </div>
       </div>
-      <!-- 管理员和超级管理员的食堂管理按钮 -->
-      <div v-if="isAdmin || isSuperAdmin">
-        <router-link to="/canteenadmin">
-          <button>食堂管理</button>
-        </router-link>
-      </div>
-      <!-- 订单管理 -->
-      <div v-if="isAdmin || isSuperAdmin">
-        <router-link to="/canteen/orders">
-          <button>订单管理</button>
-        </router-link>
-      </div>
-    </div>
+      
 
 
 
