@@ -116,4 +116,11 @@ CREATE TABLE order_details (
     FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE -- 关联菜单项
 );
 
+## 一键式启动
+npm install npm-run-all --save-dev
 
+### 一次性安装前后端的依赖
+npm run install:all
+
+### 运行项目
+npm start
