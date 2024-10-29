@@ -14,11 +14,31 @@
       </div>
 
       <!-- 用户的订单详细按钮 -->
-      <div>
-        <router-link to="/order/${orderId}">
-          <button>查看我的订单</button> <!-- 新增按钮 -->
-        </router-link>
+      <div v-if="!isAdmin && !isSuperAdmin">
+        <button @click="fetchUserOrders">查看我的订单</button>
       </div>
+
+      <!-- 用户订单列表 -->
+      <div v-if="orders.length > 0">
+        <h3>我的订单</h3>
+        <ul>
+          <li v-for="order in orders" :key="order.id">
+            订单 ID: {{ order.id }}, 总价格: {{ order.total_price }} 元, 创建时间: {{ formatDate(order.created_at) }}
+            <button @click="viewOrderDetails(order.id)"> 查看详情 </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- <div v-else>
+        <p>没有找到订单。</p>
+      </div> -->
+
+      <!-- 用户的订单详细按钮 -->
+      <!-- <div>
+        <router-link to="/order/${orderId}">
+          <button>查看我的订单</button> 
+        </router-link>
+      </div> -->
 
       <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
 
@@ -73,10 +93,10 @@
     </div>
 
 
-  <!-- 未登录用户 -->
-  <div v-else>
-    <p>请登录以查看内容。</p>
-  </div>
+    <!-- 未登录用户 -->
+    <div v-else>
+      <p>请登录以查看内容。</p>
+    </div>
   </div>
 
 
@@ -92,6 +112,7 @@ export default {
       showAdminPanel: false,
       users: [],
       admins: [],
+      orders: [] // 在数据中新增 orders 来存储用户订单
     };
   },
   computed: {
@@ -135,14 +156,36 @@ export default {
         this.fetchUsers(); // 刷新用户列表
         this.fetchAdmins(); // 刷新管理员列表
       }
+    },
+    async fetchUserOrders() {
+      try {
+        const response = await axios.get('http://localhost:3000/api/auth/orders/user', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+        this.orders = response.data; // 存储订单信息
+      } catch (error) {
+        console.error('获取订单失败:', error);
+        alert('获取订单失败，请重试。');
+      }
+    },
+    viewOrderDetails(orderId) {
+      this.$router.push({ name: 'OrderDetail', params: { orderId } });
+    },
+    formatDate(dateString) {
+      const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return new Date(dateString).toLocaleDateString('zh-CN', options);
     }
   },
+
   mounted() {
     if (this.isAdmin || this.isSuperAdmin) {
       this.fetchUsers();
       this.fetchAdmins();
     }
   }
+
 };
 </script>
 

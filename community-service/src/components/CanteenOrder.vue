@@ -102,7 +102,7 @@ export default {
           }
         );
 
-        console.log(response.data);
+        // console.log(response.data);
 
         alert(response.data.message || '结账成功！');
         this.$router.push(`/order/${response.data.orderId}`);

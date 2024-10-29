@@ -156,37 +156,37 @@ router.put('/profile', async (req, res) => {
 });
 
 // 获取轮播图 API
-router.get('/carousel-images', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM carousel_images');
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error('获取轮播图失败:', error);
-    res.status(500).json({ message: '服务器错误' });
-  }
-});
+// router.get('/carousel-images', async (req, res) => {
+//   try {
+//     const [rows] = await pool.query('SELECT * FROM carousel_images');
+//     res.status(200).json(rows);
+//   } catch (error) {
+//     console.error('获取轮播图失败:', error);
+//     res.status(500).json({ message: '服务器错误' });
+//   }
+// });
 
 // 获取热门新闻 API
-router.get('/hot-news', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM hot_news');
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error('获取热门新闻失败:', error);
-    res.status(500).json({ message: '服务器错误' });
-  }
-});
+// router.get('/hot-news', async (req, res) => {
+//   try {
+//     const [rows] = await pool.query('SELECT * FROM hot_news');
+//     res.status(200).json(rows);
+//   } catch (error) {
+//     console.error('获取热门新闻失败:', error);
+//     res.status(500).json({ message: '服务器错误' });
+//   }
+// });
 
 // 获取新闻列表 API
-router.get('/news-list', async (req, res) => {
-  try {
-    const [rows] = await pool.query('SELECT * FROM news_list');
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error('获取新闻列表失败:', error);
-    res.status(500).json({ message: '服务器错误' });
-  }
-});
+// router.get('/news-list', async (req, res) => {
+//   try {
+//     const [rows] = await pool.query('SELECT * FROM news_list');
+//     res.status(200).json(rows);
+//   } catch (error) {
+//     console.error('获取新闻列表失败:', error);
+//     res.status(500).json({ message: '服务器错误' });
+//   }
+// });
 
 // 获取用户列表
 router.get('/users', async (req, res) => {
@@ -313,7 +313,7 @@ router.post('/canteen/menu', async (req, res) => {
   const { name, price, image_url, description } = req.body;
 
   try {
-    await pool.query('INSERT INTO menu_items (name, price, image_url, description) VALUES (?, ?, ?, ?)', 
+    await pool.query('INSERT INTO menu_items (name, price, image_url, description) VALUES (?, ?, ?, ?)',
       [name, price, image_url, description]);
     res.status(201).json({ message: '菜品添加成功' });
   } catch (error) {
@@ -328,7 +328,7 @@ router.put('/canteen/menu/:id', async (req, res) => {
   const { name, price, image_url, description } = req.body;
 
   try {
-    await pool.query('UPDATE menu_items SET name = ?, price = ?, image_url = ?, description = ? WHERE id = ?', 
+    await pool.query('UPDATE menu_items SET name = ?, price = ?, image_url = ?, description = ? WHERE id = ?',
       [name, price, image_url, description, menuItemId]);
     res.status(200).json({ message: '菜品更新成功' });
   } catch (error) {
@@ -362,7 +362,7 @@ router.post('/canteen/order', authenticateToken, async (req, res) => {
   try {
     // 开始一个事务
     await pool.query('START TRANSACTION');
-    
+
     // 计算总价格
     const totalPrice = items.reduce((total, item) => total + (parseFloat(item.price) * item.quantity), 0);
 
@@ -404,7 +404,7 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
   const userId = req.user.id; // 获取用户ID
 
   // console.log(`Fetching details for orderId: ${orderId} for userId: ${userId}`); // 添加调试日志
-  
+
   try {
     const [orderDetails] = await pool.query(
       `SELECT o.id, o.created_at, o.total_price, 
@@ -441,8 +441,8 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
       }))
     };
 
-    console.log('formattedOrder:', formattedOrder); // 增加日志，详细查看返回的数据结构
-    
+    // console.log('formattedOrder:', formattedOrder); // 增加日志，详细查看返回的数据结构
+
     res.status(200).json(formattedOrder);
   } catch (error) {
     console.error('获取订单详情失败:', error);
@@ -450,6 +450,120 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// 获取用户所有订单
+router.get('/orders/user', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const [orders] = await pool.query(
+      'SELECT o.id, o.total_price, o.created_at FROM orders o WHERE o.user_id = ?',
+      [userId]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: '没有找到订单' });
+    }
+
+    res.status(200).json(orders);
+  } catch (error) {
+    console.error('获取订单失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
 
 
+// 获取所有订单
+router.get('/canteen/orders', authenticateToken, async (req, res) => {
+  const userRole = req.user.role;
+
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
+    return res.status(403).json({ message: '无权访问' });
+  }
+
+  try {
+    const [orders] = await pool.query(
+      `SELECT o.id, o.total_price, o.created_at, o.status, u.username, u.email,
+              oi.menu_item_id, oi.quantity, oi.total_price AS item_total,
+              m.name AS menu_item_name, m.price AS menu_item_price
+       FROM orders o
+       JOIN order_details oi ON o.id = oi.order_id
+       JOIN menu_items m ON oi.menu_item_id = m.id
+       JOIN users u ON o.user_id = u.id`
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: '没有找到订单' });
+    }
+
+    // 格式化数据，使每个订单包含详细菜品信息
+    const formattedOrders = [];
+    const orderMap = new Map();
+
+    for (const row of orders) {
+      if (!orderMap.has(row.id)) {
+        orderMap.set(row.id, {
+          id: row.id,
+          total_price: row.total_price,
+          created_at: row.created_at,
+          status: row.status,
+          username: row.username,
+          email: row.email,
+          items: []
+        });
+        formattedOrders.push(orderMap.get(row.id));
+      }
+
+      orderMap.get(row.id).items.push({
+        menu_item_id: row.menu_item_id,
+        name: row.menu_item_name,
+        price: row.menu_item_price,
+        quantity: row.quantity,
+        total: row.item_total
+      });
+    }
+
+    // console.log('Formatted Orders:', JSON.stringify(formattedOrders, null, 2)); // 打印格式化后的订单数据
+
+    res.status(200).json(formattedOrders);
+  } catch (error) {
+    console.error('获取订单失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 更新订单状态
+router.put('/canteen/orders/:id', authenticateToken, async (req, res) => {
+  const orderId = req.params.id;
+  const { status } = req.body;
+  const userRole = req.user.role;
+
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
+    return res.status(403).json({ message: '无权访问' });
+  }
+
+  try {
+    await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, orderId]);
+    res.status(200).json({ message: '订单状态已更新' });
+  } catch (error) {
+    console.error('更新订单状态失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 删除订单
+router.delete('/canteen/orders/:id', authenticateToken, async (req, res) => {
+  const orderId = req.params.id;
+  const userRole = req.user.role;
+
+  if (userRole !== 'admin' && userRole !== 'super_admin') {
+    return res.status(403).json({ message: '无权访问' });
+  }
+
+  try {
+    await pool.query('DELETE FROM orders WHERE id = ?', [orderId]);
+    res.status(200).json({ message: '订单已删除' });
+  } catch (error) {
+    console.error('删除订单失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
 module.exports = router;

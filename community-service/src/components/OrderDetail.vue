@@ -35,7 +35,7 @@ export default {
     },
     created() {
         const orderId = this.$route.params.orderId; // 从路由获取订单 ID
-        console.log('获取的 orderId:', orderId); // 打印 orderId
+        // console.log('获取的 orderId:', orderId); // 打印 orderId
         if (orderId && orderId !== ':orderId') {
             this.fetchOrderDetails(orderId); // 获取订单详细信息
         } else {
@@ -51,12 +51,12 @@ export default {
                     },
                 });
 
-                console.log('获取的订单信息:', response.data); // 打印订单信息
+                // console.log('获取的订单信息:', response.data); // 打印订单信息
 
                 this.order = response.data; // 保存订单信息
 
-                console.log('order email:', this.order.email); // 详细日志
-                console.log('order status:', this.order.status); // 详细日志
+                // console.log('order email:', this.order.email); // 详细日志
+                // console.log('order status:', this.order.status); // 详细日志
 
             } catch (error) {
                 console.error('获取订单详细信息失败:', error);
