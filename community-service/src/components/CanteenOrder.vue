@@ -5,7 +5,7 @@
     <!-- 菜品列表 -->
     <div v-if="menuItems.length > 0">
       <div v-for="item in menuItems" :key="item.id" class="menu-item">
-        <img :src="item.image_url" alt="菜品图片" />
+        <img :src="getImageUrl(item.image_url)" alt="菜品图片" />
         <h3>{{ item.name }}</h3>
         <p>{{ item.description }}</p>
         <p>价格: {{ item.price }} 元</p>
@@ -38,9 +38,10 @@
   </div>
 </template>
 
-
 <script>
 import axios from 'axios';
+
+const BASE_URL = 'http://localhost:3000'; // 确保 BASE_URL 正确指向你的服务器地址
 
 export default {
   data() {
@@ -55,7 +56,7 @@ export default {
   methods: {
     async fetchMenuItems() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/canteen/menu'); // 请求可用菜单项
+        const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`); // 请求可用菜单项
         this.menuItems = response.data.map(item => ({ ...item, quantity: 1 })); // 添加 quantity 字段并设置默认值为1
       } catch (error) {
         console.error('获取菜单失败:', error);
@@ -93,7 +94,7 @@ export default {
 
       try {
         const response = await axios.post(
-          'http://localhost:3000/api/auth/canteen/order',
+          `${BASE_URL}/api/auth/canteen/order`,
           { items: orders },
           {
             headers: {
@@ -102,19 +103,22 @@ export default {
           }
         );
 
-        // console.log(response.data);
-
         alert(response.data.message || '结账成功！');
         this.$router.push(`/order/${response.data.orderId}`);
-        // const actualOrderId = 1; // 假设这是实际的订单 ID
-        // console.log('跳转到订单详细页面，订单 ID:', actualOrderId); // 确保这里打印出有效的订单 ID
-        // this.$router.push({ name: 'OrderDetail', params: { orderId: actualOrderId } });
       } catch (error) {
         console.error('结账失败:', error);
         alert('结账失败，请重试。');
       }
-    }
+    },
 
+    getImageUrl(path) {
+      if (path.startsWith('http')) {
+        // 如果已经是完整URL直接返回
+        return path;
+      }
+      // 拼接完整URL
+      return `${BASE_URL}${path}`;
+    }
   }
 };
 </script>

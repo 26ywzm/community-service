@@ -20,6 +20,8 @@
 
 #### 后端启动
 
+npm install multer
+
 > node app.js
 
 #### API设计

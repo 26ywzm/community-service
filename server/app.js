@@ -3,6 +3,7 @@ const mysql = require('mysql2');
 const authRoutes = require('./routes/auth');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 
 // 初始化 dotenv 配置
 require('dotenv').config();
@@ -12,6 +13,9 @@ const app = express(); // 初始化 app
 
 app.use(cors()); // 在 app 初始化后调用 cors
 app.use(express.json()); // 解析 JSON 请求体
+
+// 允许访问uploads目录中的文件
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 配置 MySQL 连接
 const db = mysql.createConnection({

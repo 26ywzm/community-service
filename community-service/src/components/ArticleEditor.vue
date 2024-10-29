@@ -15,6 +15,10 @@
         <input type="text" v-model="imageUrl" />
       </div>
       <div>
+        <label>或上传图片：</label>
+        <input type="file" ref="fileInput" @change="handleFileUpload" />
+      </div>
+      <div>
         <label>选择发布位置：</label>
         <select v-model="category" required>
           <option value="carousel">轮播图</option>
@@ -37,16 +41,28 @@ export default {
       content: '',
       imageUrl: '',
       category: 'newsList', // 默认选择新闻列表
+      imageFile: null // 增加一个字段存储文件
     };
   },
   methods: {
+    handleFileUpload(event) {
+      this.imageFile = event.target.files[0];
+    },
     async submitArticle() {
+      const formData = new FormData();
+      formData.append('title', this.title);
+      formData.append('content', this.content);
+      formData.append('category', this.category);
+      formData.append('image_url', this.imageUrl);
+      if (this.imageFile) {
+        formData.append('image', this.imageFile); // 添加文件到formData
+      }
+
       try {
-        const response = await axios.post('http://localhost:3000/api/auth/articles', {
-          title: this.title,
-          content: this.content,
-          image_url: this.imageUrl,
-          category: this.category,
+        const response = await axios.post('http://localhost:3000/api/auth/articles', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data' // 设置请求头
+          }
         });
         alert(response.data.message);
         this.resetForm();
@@ -59,7 +75,9 @@ export default {
       this.title = '';
       this.content = '';
       this.imageUrl = '';
+      this.imageFile = null; // 重置文件字段
       this.category = 'newsList';
+      this.$refs.fileInput.value = ''; // 清空文件输入
     }
   }
 };
