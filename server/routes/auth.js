@@ -403,15 +403,18 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
   const orderId = req.params.id;
   const userId = req.user.id; // 获取用户ID
 
-  console.log(`Fetching details for orderId: ${orderId} for userId: ${userId}`); // 添加调试日志
+  // console.log(`Fetching details for orderId: ${orderId} for userId: ${userId}`); // 添加调试日志
   
   try {
     const [orderDetails] = await pool.query(
-      `SELECT o.id, o.created_at, o.total_price, oi.menu_item_id, oi.quantity, oi.total_price AS item_total, 
+      `SELECT o.id, o.created_at, o.total_price, 
+              u.email, o.status,           -- 添加用户邮箱和订单状态
+              oi.menu_item_id, oi.quantity, oi.total_price AS item_total, 
               m.name AS menu_item_name, m.price AS menu_item_price 
        FROM orders o
        JOIN order_details oi ON o.id = oi.order_id
        JOIN menu_items m ON oi.menu_item_id = m.id
+       JOIN users u ON o.user_id = u.id  -- 关联用户表
        WHERE o.id = ? AND o.user_id = ?`,
       [orderId, userId]
     );
@@ -423,6 +426,8 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
     // 格式化返回数据
     const formattedOrder = {
       id: orderDetails[0].id,
+      email: orderDetails[0].email, // 添加用户邮箱
+      status: orderDetails[0].status, // 添加订单状态
       created_at: orderDetails[0].created_at,
       total_price: orderDetails[0].total_price,
       details: orderDetails.map(item => ({
@@ -432,16 +437,19 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
           price: item.menu_item_price
         },
         quantity: item.quantity,
-        total_price: item.item_total // 修复这里，使用 item.item_total
+        total_price: item.item_total // 使用 item.item_total
       }))
     };
 
+    console.log('formattedOrder:', formattedOrder); // 增加日志，详细查看返回的数据结构
+    
     res.status(200).json(formattedOrder);
   } catch (error) {
     console.error('获取订单详情失败:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
+
 
 
 module.exports = router;
