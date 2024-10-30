@@ -56,6 +56,10 @@ npm install multer
 新闻列表 API: GET http://localhost:3000/api/news-list
 
 ## Mysql 连接
+
+### 创建数据库
+CREATE DATABASE community;
+
 ### 用户表
 > CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,                       -- 用户 ID，自动递增

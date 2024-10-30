@@ -2,7 +2,7 @@
   "name": "community",
   "version": "1.0.0",
   "scripts": {
-    "start": "run-p start:client start:server",
+    "start": "npx run-p start:client start:server",
     "start:client": "cd community-service && npm run serve",
     "start:server": "cd server && node app.js",
     "install:all": "run-s install:client install:server",
