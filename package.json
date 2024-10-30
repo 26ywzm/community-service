@@ -5,7 +5,7 @@
     "start": "npx run-p start:client start:server",
     "start:client": "cd community-service && npm run serve",
     "start:server": "cd server && node app.js",
-    "install:all": "run-s install:client install:server",
+    "install:all": "npx run-s install:client install:server",
     "install:client": "cd community-service && npm install",
     "install:server": "cd server && npm install"
   },
