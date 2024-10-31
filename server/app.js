@@ -4,7 +4,6 @@ const authRoutes = require('./routes/auth');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
-const PORT = process.env.PORT || 3000;
 
 // 初始化 dotenv 配置
 require('dotenv').config();
@@ -39,6 +38,7 @@ db.connect(err => {
 // 使用 auth 路由
 app.use('/api/auth', authRoutes);
 
-app.listen(PORT, '0.0.0.0', () => {
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
