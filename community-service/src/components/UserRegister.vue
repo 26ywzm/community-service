@@ -44,7 +44,7 @@ export default {
       }
 
       try {
-        const response = await axios.post('http://localhost:3000/api/auth/register', {
+        const response = await axios.post('http://8.130.27.173/:3000/api/auth/register', {
           username: this.username, // 添加用户名到请求体
           email: this.email,       // 发送 email 和 password
           password: this.password,
