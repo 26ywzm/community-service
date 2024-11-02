@@ -99,20 +99,18 @@ export default {
 
     startCarousel() {
       this.intervalId = setInterval(() => {
-        this.nextImage(); // 定时切换到下一张图片
-      }, 3000); // 每 3 秒切换一次
+        this.nextImage(); 
+      }, 3000); 
     },
 
     pauseCarousel() {
-      clearInterval(this.intervalId); // 鼠标悬停时暂停
+      clearInterval(this.intervalId); 
     },
 
     getImageUrl(path) {
       if (path.startsWith('http')) {
-        // 如果已经是完整URL直接返回
         return path;
       }
-      // 拼接完整URL
       return `${BASE_URL}${path}`;
     },
 

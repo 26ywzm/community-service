@@ -28,7 +28,7 @@ export default {
       try {
         const response = await axios.get(`${BASE_URL}/api/auth/articles/${newsId}`);
         this.news = response.data; // 获取新闻详情数据
-        console.log('文章详情数据:', response.data); // 调试输出
+        // console.log('文章详情数据:', response.data); // 调试输出
       } catch (error) {
         console.error('获取新闻详情失败:', error);
       }
