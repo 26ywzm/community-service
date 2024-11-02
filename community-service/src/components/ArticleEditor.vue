@@ -32,6 +32,7 @@
 </template>
 
 <script>
+const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
 
 export default {
@@ -59,7 +60,7 @@ export default {
       }
 
       try {
-        const response = await axios.post('http://localhost:3000/api/auth/articles', formData, {
+        const response = await axios.post(`${API}/articles`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data' // 设置请求头
           }

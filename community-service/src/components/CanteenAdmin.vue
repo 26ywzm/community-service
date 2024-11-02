@@ -51,8 +51,7 @@
 
 <script>
 import axios from 'axios';
-
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.VUE_APP_BASE_URL;
 
 export default {
   data() {

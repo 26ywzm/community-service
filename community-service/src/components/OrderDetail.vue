@@ -25,6 +25,7 @@
 </template>
 
 <script>
+const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
 
 export default {
@@ -45,7 +46,7 @@ export default {
     methods: {
         async fetchOrderDetails(orderId) {
             try {
-                const response = await axios.get(`http://localhost:3000/api/auth/canteen/order/${orderId}`, {
+                const response = await axios.get(`${API}/canteen/order/${orderId}`, {
                     headers: {
                         Authorization: `Bearer ${localStorage.getItem('authToken')}`,
                     },

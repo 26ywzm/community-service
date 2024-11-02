@@ -4,7 +4,7 @@
     <div class="carousel" @mouseenter="pauseCarousel" @mouseleave="startCarousel">
       <router-link v-if="carouselImages.length > 0"
         :to="{ name: 'NewsDetail', params: { id: carouselImages[currentImage].id } }">
-        <img :src="carouselImages[currentImage].image_url" alt="轮播图" class="carousel-image" />
+        <img :src="getImageUrl(carouselImages[currentImage].image_url)" alt="轮播图" class="carousel-image" />
       </router-link>
       <button @click="prevImage">‹</button>
       <button @click="nextImage">›</button>
@@ -16,7 +16,7 @@
       <div class="hot-news-grid">
         <div v-for="news in hotNews" :key="news.id" class="news-item">
           <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">
-            <img :src="news.image_url" alt="新闻图片" class="news-image" />
+            <img :src="getImageUrl(news.image_url)" alt="新闻图片" class="news-image" />
           </router-link>
           <p>{{ news.title }}</p>
         </div>
@@ -36,9 +36,10 @@
 </template>
 
 <script>
+const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
 import communityHome from '@/assets/community-home.js';
-
+const BASE_URL = process.env.VUE_APP_BASE_URL;
 export default {
   ...communityHome,
   data() {
@@ -48,7 +49,7 @@ export default {
       hotNews: [],        // 热门新闻数据
       newsList: [],       // 新闻列表数据
       currentImage: 0,    // 当前显示的轮播图索引
-      intervalId: null,    // 用于存储定时器 ID
+      intervalId: null,   // 用于存储定时器 ID
     };
   },
   mounted() {
@@ -68,13 +69,11 @@ export default {
 
     async fetchCarouselImages() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/articles?category=carousel');
-        // 确保 response.data 是一个数组，并且每个对象都包含 id 和 image_url
+        const response = await axios.get(`${API}/articles?category=carousel`);
         this.carouselImages = response.data.map(article => ({
-          id: article.id,        // 确保你在这里获取到 id
-          image_url: article.image_url // 获取图片链接
+          id: article.id,
+          image_url: article.image_url,
         }));
-        console.log('轮播图数据:', this.carouselImages); // 检查数据结构
       } catch (error) {
         console.error('获取轮播图失败:', error);
       }
@@ -82,7 +81,7 @@ export default {
 
     async fetchHotNews() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/articles?category=hotNews'); // 修改为新 API
+        const response = await axios.get(`${API}/articles?category=hotNews`);
         this.hotNews = response.data;
       } catch (error) {
         console.error('获取热门新闻失败:', error);
@@ -91,7 +90,7 @@ export default {
 
     async fetchNewsList() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/articles?category=newsList'); // 修改为新 API
+        const response = await axios.get(`${API}/articles?category=newsList`);
         this.newsList = response.data;
       } catch (error) {
         console.error('获取新闻列表失败:', error);
@@ -108,8 +107,13 @@ export default {
       clearInterval(this.intervalId); // 鼠标悬停时暂停
     },
 
-    toggleNav() {
-      this.isNavHidden = !this.isNavHidden;
+    getImageUrl(path) {
+      if (path.startsWith('http')) {
+        // 如果已经是完整URL直接返回
+        return path;
+      }
+      // 拼接完整URL
+      return `${BASE_URL}${path}`;
     },
 
     nextImage() {
@@ -117,6 +121,7 @@ export default {
         this.currentImage = (this.currentImage + 1) % this.carouselImages.length;
       }
     },
+
     prevImage() {
       if (this.carouselImages.length > 0) {
         this.currentImage = (this.currentImage + this.carouselImages.length - 1) % this.carouselImages.length;

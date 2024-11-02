@@ -41,7 +41,7 @@
 <script>
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000'; // 确保 BASE_URL 正确指向你的服务器地址
+const BASE_URL = process.env.VUE_APP_BASE_URL; // 确保 BASE_URL 正确指向你的服务器地址
 
 export default {
   data() {

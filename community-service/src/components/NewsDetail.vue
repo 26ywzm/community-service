@@ -11,7 +11,7 @@
 import axios from 'axios';
 
 // 确保 URL 前缀正确，调整为你实际的服务器 URL 及端口
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.VUE_APP_BASE_URL;
 
 export default {
   data() {

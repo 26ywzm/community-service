@@ -29,17 +29,6 @@
         </ul>
       </div>
 
-      <!-- <div v-else>
-        <p>没有找到订单。</p>
-      </div> -->
-
-      <!-- 用户的订单详细按钮 -->
-      <!-- <div>
-        <router-link to="/order/${orderId}">
-          <button>查看我的订单</button> 
-        </router-link>
-      </div> -->
-
       <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
 
       <div v-if="isSuperAdmin || isAdmin">
@@ -104,6 +93,7 @@
 
 
 <script>
+const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
 
 export default {
@@ -134,17 +124,17 @@ export default {
   },
   methods: {
     async fetchUsers() {
-      const response = await axios.get('http://localhost:3000/api/auth/users');
+      const response = await axios.get(`${API}/users`);
       this.users = response.data;
     },
     async fetchAdmins() {
-      const response = await axios.get('http://localhost:3000/api/auth/admins');
+      const response = await axios.get(`${API}/admins`);
       this.admins = response.data;
     },
     async promoteUser(userId) {
       // 仅超级管理员可以执行升降级操作
       if (this.isSuperAdmin) {
-        await axios.post(`http://localhost:3000/api/auth/promote/${userId}`);
+        await axios.post(`${API}/promote/${userId}`);
         this.fetchUsers(); // 刷新用户列表
         this.fetchAdmins(); // 刷新管理员列表
       }
@@ -152,14 +142,14 @@ export default {
     async demoteUser(adminId) {
       // 仅超级管理员可以执行升降级操作
       if (this.isSuperAdmin) {
-        await axios.post(`http://localhost:3000/api/auth/demote/${adminId}`);
+        await axios.post(`${API}/demote/${adminId}`);
         this.fetchUsers(); // 刷新用户列表
         this.fetchAdmins(); // 刷新管理员列表
       }
     },
     async fetchUserOrders() {
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/orders/user', {
+        const response = await axios.get(`${API}/orders/user`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`,
           },

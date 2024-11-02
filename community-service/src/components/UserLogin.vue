@@ -16,6 +16,7 @@
 </template>
 
 <script>
+const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
 
 export default {
@@ -29,7 +30,7 @@ export default {
   methods: {
     async login() {
       try {
-        const response = await axios.post('http://localhost:3000/api/auth/login', {
+        const response = await axios.post(`${API}/login`, {
           email: this.email,      // 发送 email 和 password
           password: this.password,
         });

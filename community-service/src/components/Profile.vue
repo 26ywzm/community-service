@@ -39,6 +39,7 @@
 </template>
 
 <script>
+const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
 
 export default {
@@ -77,7 +78,7 @@ export default {
       }
 
       try {
-        const response = await axios.get('http://localhost:3000/api/auth/profile', {
+        const response = await axios.get(`${API}/profile`, {
           headers: {
             Authorization: token,
           },
@@ -98,7 +99,7 @@ export default {
 
       try {
         await axios.put(
-          'http://localhost:3000/api/auth/profile',
+          `${API}/profile`,
           {
             username: this.user.username,
             email: this.user.email,

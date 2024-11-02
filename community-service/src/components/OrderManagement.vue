@@ -55,7 +55,7 @@
       <div v-else>
         <p>没有找到订单。</p>
       </div>
-  
+
       <!-- 对话框 -->
       <div v-if="showDialog" class="dialog-overlay">
         <div class="dialog">
@@ -67,6 +67,7 @@
   </template>
   
   <script>
+  const API = process.env.VUE_APP_API_URL;
   import axios from 'axios';
   
   export default {
@@ -84,7 +85,7 @@
     methods: {
       async fetchOrders() {
         try {
-          const response = await axios.get('http://localhost:3000/api/auth/canteen/orders', {
+          const response = await axios.get(`${API}/canteen/orders`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('authToken')}`
             }
@@ -126,7 +127,7 @@
       async updateOrderStatus(order, status) {
         try {
           await axios.put(
-            `http://localhost:3000/api/auth/canteen/orders/${order.id}`, 
+            `${API}/canteen/orders/${order.id}`, 
             { status }, 
             {
               headers: {
@@ -143,7 +144,7 @@
       },
       async deleteOrder(orderId) {
         try {
-          await axios.delete(`http://localhost:3000/api/auth/canteen/orders/${orderId}`, {
+          await axios.delete(`${API}/canteen/orders/${orderId}`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('authToken')}`
             }
