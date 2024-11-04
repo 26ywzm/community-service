@@ -1,6 +1,6 @@
 <template>
   <div class="article-editor">
-    <h2>编写文章</h2>
+    <h2>{{ editingArticleId ? "编辑文章" : "编写文章" }}</h2>
     <form @submit.prevent="submitArticle">
       <div>
         <label>标题：</label>
@@ -26,8 +26,29 @@
           <option value="newsList">新闻列表</option>
         </select>
       </div>
-      <button type="submit">发布文章</button>
+      <button type="submit">{{ editingArticleId ? "保存修改" : "发布文章" }}</button>
+      <button v-if="editingArticleId" type="button" @click="cancelEdit">取消编辑</button>
     </form>
+
+    <!-- 选择文章区域 -->
+    <div class="articles-area">
+      <!-- 切换按钮 -->
+      <div class="category-buttons">
+        <button @click="loadArticles('carousel')">轮播图</button>
+        <button @click="loadArticles('hotNews')">热门新闻</button>
+        <button @click="loadArticles('newsList')">新闻列表</button>
+      </div>
+
+      <!-- 列表展示 -->
+      <div v-for="article in articles" :key="article.id" class="article">
+      <h3>{{ article.title }}</h3>
+      <p>{{ article.content }}</p>
+      <div class="action-buttons">
+        <button class="edit" @click="editArticle(article)">修改</button>
+        <button @click="deleteArticle(article.id)">删除</button>
+      </div>
+    </div>
+    </div>
   </div>
 </template>
 
@@ -41,11 +62,26 @@ export default {
       title: '',
       content: '',
       imageUrl: '',
-      category: 'newsList', // 默认选择新闻列表
-      imageFile: null // 增加一个字段存储文件
+      category: 'newsList',
+      imageFile: null,
+      editingArticleId: null,
+      articles: []
     };
   },
   methods: {
+    async fetchArticles(category) {
+      try {
+        const response = await axios.get(`${API}/articles?category=${category}`);
+        this.articles = response.data; // 更新文章列表
+        console.log(`获取 ${category} 文章成功`, this.articles);
+      } catch (error) {
+        console.error(`获取 ${category} 文章失败:`, error);
+      }
+    },
+    async loadArticles(category) {
+      this.category = category; // 更新当前类别
+      await this.fetchArticles(category); // 获取对应类别的文章
+    },
     handleFileUpload(event) {
       this.imageFile = event.target.files[0];
     },
@@ -56,30 +92,62 @@ export default {
       formData.append('category', this.category);
       formData.append('image_url', this.imageUrl);
       if (this.imageFile) {
-        formData.append('image', this.imageFile); // 添加文件到formData
+        formData.append('image', this.imageFile);
       }
 
       try {
-        const response = await axios.post(`${API}/articles`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data' // 设置请求头
-          }
-        });
-        alert(response.data.message);
+        if (this.editingArticleId) {
+          // 编辑模式
+          await axios.put(`${API}/articles/${this.editingArticleId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          alert('文章修改成功');
+        } else {
+          // 新建模式
+          await axios.post(`${API}/articles`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          alert('文章发布成功');
+        }
         this.resetForm();
+        this.fetchArticles();
       } catch (error) {
-        console.error('发布文章失败:', error);
-        alert('发布失败，请重试。');
+        console.error('提交文章失败:', error);
+        alert('提交失败，请重试。');
+      }
+    },
+    editArticle(article) {
+      this.title = article.title;
+      this.content = article.content;
+      this.imageUrl = article.image_url;
+      this.category = article.category;
+      this.editingArticleId = article.id;
+    },
+    async deleteArticle(articleId) {
+      try {
+        await axios.delete(`${API}/articles/${articleId}`);
+        alert('文章删除成功');
+        this.fetchArticles();
+      } catch (error) {
+        console.error('删除文章失败:', error);
+        alert('删除失败，请重试。');
       }
     },
     resetForm() {
       this.title = '';
       this.content = '';
       this.imageUrl = '';
-      this.imageFile = null; // 重置文件字段
+      this.imageFile = null;
       this.category = 'newsList';
-      this.$refs.fileInput.value = ''; // 清空文件输入
+      this.editingArticleId = null;
+      this.$refs.fileInput.value = '';
+    },
+    cancelEdit() {
+      this.resetForm();
     }
+  },
+  mounted() {
+    this.fetchArticles();
   }
 };
 </script>
@@ -99,6 +167,68 @@ h2 {
   text-align: center;
   color: #333;
   margin-bottom: 20px;
+}
+
+/* 新增区域样式 */
+.article-area {
+  margin-bottom: 30px;
+}
+
+.category-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.category-buttons button {
+  flex: 1;
+  padding: 10px;
+  margin-right: 10px;
+  background-color: #42b983;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.category-buttons button:hover {
+  background-color: #369d73;
+}
+
+.category-buttons button:last-child {
+  margin-right: 0; /* 去掉最后一个按钮的右边距 */
+}
+
+/* 修改按钮和删除按钮的样式 */
+.article .action-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px; /* 上方的间距 */
+}
+
+.action-buttons button {
+  flex: 1; /* 使按钮宽度均匀 */
+  padding: 5px; /* 按钮变小 */
+  margin-right: 5px; /* 按钮之间的间距 */
+  background-color: #e74c3c; /* 删除按钮颜色 */
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.action-buttons button:hover {
+  background-color: #c0392b; /* 删除按钮悬停颜色 */
+}
+
+.action-buttons button.edit {
+  background-color: #42b983; /* 修改按钮颜色 */
+}
+
+.action-buttons button.edit:hover {
+  background-color: #369d73; /* 修改按钮悬停颜色 */
 }
 
 .form-group {
@@ -169,7 +299,7 @@ button:not(:disabled):hover {
   .article-editor {
     padding: 15px;
   }
-  
+
   button {
     font-size: 14px;
     padding: 10px 0;
@@ -177,3 +307,4 @@ button:not(:disabled):hover {
   }
 }
 </style>
+

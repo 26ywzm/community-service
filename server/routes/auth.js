@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const dotenv = require('dotenv');
 const multer = require('multer');
+const fs = require('fs');
 const path = require('path');
 const authenticateToken = require('../middleware/auth'); // 导入中间件
 
@@ -169,6 +170,18 @@ router.put('/profile', async (req, res) => {
     res.status(500).json({ message: '服务器错误' });
   }
 });
+// 删除用户或管理员
+router.delete('/users/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    await pool.query('DELETE FROM users WHERE id = ?', [userId]);
+    res.status(200).json({ message: '用户已删除' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
 
 // 获取轮播图 API
 // router.get('/carousel-images', async (req, res) => {
@@ -308,6 +321,63 @@ router.get('/articles/:id', async (req, res) => {
     res.status(200).json(rows[0]); // 返回文章详情
   } catch (error) {
     console.error('获取文章详情失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 修改文章
+router.put('/articles/:id', upload.single('image'), async (req, res) => {
+  const articleId = req.params.id;
+  const { title, content, category, image_url } = req.body;
+  const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
+
+  try {
+    const [result] = await pool.query(
+      'UPDATE articles SET title = ?, content = ?, category = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [title, content, category, uploadedImageUrl, articleId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: '文章未找到' });
+    }
+    res.status(200).json({ message: '文章更新成功' });
+  } catch (error) {
+    console.error('修改文章失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 删除文章
+router.delete('/articles/:id', async (req, res) => {
+  const articleId = req.params.id;
+  try {
+    // 首先查找文章以获取图片路径
+    const [rows] = await pool.query('SELECT image_url FROM articles WHERE id = ?', [articleId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '文章未找到' });
+    }
+
+    // 获取图片文件名
+    const imageUrl = rows[0].image_url;
+    if (imageUrl) {
+      const imagePath = path.join(__dirname, '../uploads', path.basename(imageUrl)); // 确保路径正确
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('删除图片失败:', err);
+        } else {
+          console.log('图片删除成功');
+        }
+      });
+    }
+
+    // 删除文章
+    const [result] = await pool.query('DELETE FROM articles WHERE id = ?', [articleId]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: '文章未找到' });
+    }
+    res.status(200).json({ message: '文章删除成功' });
+  } catch (error) {
+    console.error('删除文章失败:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });

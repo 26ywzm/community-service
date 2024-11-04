@@ -51,6 +51,7 @@
               {{ admin.username }}
               <span v-if="isSuperAdmin"> <!-- 仅超级管理员可以降级 -->
                 <button @click="demoteUser(admin.id)">降为用户</button>
+                <button @click="deleteUser(admin.id)">删除</button>
               </span>
             </li>
           </ul>
@@ -62,6 +63,7 @@
               {{ user.username }}
               <span v-if="isSuperAdmin"> <!-- 仅超级管理员可以升级 -->
                 <button @click="promoteUser(user.id)">升为管理员</button>
+                <button @click="deleteUser(user.id)">删除</button>
               </span>
             </li>
           </ul>
@@ -160,6 +162,19 @@ export default {
         alert('获取订单失败，请重试。');
       }
     },
+    // 删除用户
+    async deleteUser(userId) {
+    if (this.isSuperAdmin) {
+      try {
+        await axios.delete(`${API}/users/${userId}`);
+        this.fetchUsers(); // 刷新用户列表
+        this.fetchAdmins(); // 刷新管理员列表
+      } catch (error) {
+        console.error('删除用户失败:', error);
+        alert('删除用户失败，请重试。');
+      }
+    }
+  },
     viewOrderDetails(orderId) {
       this.$router.push({ name: 'OrderDetail', params: { orderId } });
     },
