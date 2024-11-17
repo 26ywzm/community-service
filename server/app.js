@@ -4,12 +4,15 @@ const authRoutes = require('./routes/auth');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
+const compression = require('compression');
 
 // 初始化 dotenv 配置
 require('dotenv').config();
 dotenv.config();
 
 const app = express(); // 初始化 app
+
+app.use(compression());
 
 app.use(cors()); // 在 app 初始化后调用 cors
 app.use(express.json()); // 解析 JSON 请求体
