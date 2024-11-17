@@ -4,7 +4,7 @@ module.exports = defineConfig({
   transpileDependencies: true,
   devServer: {
     allowedHosts: 'all',
-    https: false,
+    https: true,
     client: {
       webSocketURL: 'wss://sq.26ywzm.icu/ws', 
     },
