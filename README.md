@@ -12,6 +12,9 @@
 #### 前端启动
 > npm run serve
 
+### 添加vantUI和Element PlusUI
+
+
 ## server 后端(node.js + Express)
 
 #### 安装依赖

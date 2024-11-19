@@ -1,15 +1,21 @@
 <template>
   <div id="app">
     <!-- 顶部导航栏（桌面和平板设备） -->
-    <nav v-if="!isMobile" class="top-nav" :class="{ 'nav-hidden': isNavHidden }">
+    <el-menu v-if="!isMobile" :class="{ 'nav-hidden': isNavHidden }" mode="horizontal" background-color="#444"
+      text-color="#fff" active-text-color="#1e90ff" class="top-menu">
       <div class="logo">社区服务</div>
-      <ul>
-        <li><router-link to="/">首页</router-link></li>
-        <li><router-link to="/discover">发现</router-link></li>
-        <li><router-link to="/profile">我的</router-link></li>
-      </ul>
-      <div class="toggle-button" v-if="isNavHidden" @click="toggleNav">☰</div>
-    </nav>
+      <div class="menu-right">
+        <el-menu-item index="1">
+          <router-link to="/">首页</router-link>
+        </el-menu-item>
+        <el-menu-item index="2">
+          <router-link to="/discover">发现</router-link>
+        </el-menu-item>
+        <el-menu-item index="3">
+          <router-link to="/profile">我的</router-link>
+        </el-menu-item>
+      </div>
+    </el-menu>
 
     <!-- 路由视图，展示每个页面的内容 -->
     <div :class="{ 'content-padding': !isNavHidden && !isMobile }">
@@ -17,10 +23,25 @@
     </div>
 
     <!-- 底部导航栏（手机设备） -->
-    <van-tabbar v-if="isMobile" v-model="activeTab">
-      <van-tabbar-item to="/" icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item to="/discover" icon="search">发现</van-tabbar-item>
-      <van-tabbar-item to="/profile" icon="user-o">我的</van-tabbar-item>
+    <van-tabbar v-if="isMobile" v-model="activeTab" active-color="#1e90ff" inactive-color="#999">
+      <van-tabbar-item replace :to="'/'">
+        <template #icon>
+          <van-icon name="home-o" size="24px" />
+        </template>
+        首页
+      </van-tabbar-item>
+      <van-tabbar-item replace :to="'/discover'">
+        <template #icon>
+          <van-icon name="search" size="24px" />
+        </template>
+        发现
+      </van-tabbar-item>
+      <van-tabbar-item replace :to="'/profile'">
+        <template #icon>
+          <van-icon name="user-o" size="24px" />
+        </template>
+        我的
+      </van-tabbar-item>
     </van-tabbar>
   </div>
 </template>
@@ -29,47 +50,73 @@
 export default {
   data() {
     return {
-      isMobile: false,
-      isNavHidden: false,
+      isMobile: false, // 是否是手机端
+      activeTab: '/', // 当前激活的Tab
     };
   },
   mounted() {
-    this.checkDevice();
-    window.addEventListener('scroll', this.handleScroll);
-    window.addEventListener('resize', this.checkDevice);
+    this.checkDevice(); // 检查设备
+    window.addEventListener('resize', this.checkDevice); // 监听窗口变化
+    this.syncActiveTab(); // 同步初始Tab状态
   },
   beforeUnmount() {
-    window.removeEventListener('scroll', this.handleScroll);
     window.removeEventListener('resize', this.checkDevice);
+  },
+  watch: {
+    $route(to) {
+      // 监听路由变化，同步导航状态
+      this.activeTab = to.path;
+    },
   },
   methods: {
     checkDevice() {
-      this.isMobile = window.innerWidth <= 768; // 768px 以下为手机端
+      this.isMobile = window.innerWidth <= 768;
     },
-    handleScroll() {
-      this.isNavHidden = window.scrollY > 100; // 当滚动超过100px时隐藏导航栏
-    },
-    toggleNav() {
-      this.isNavHidden = !this.isNavHidden; // 点击按钮切换导航栏显示
+    syncActiveTab() {
+      // 初始激活状态同步
+      this.activeTab = this.$route.path;
     },
   },
 };
 </script>
 
 <style scoped>
-li {
-  list-style-type: none;
+.top-menu {
+  display: flex;
+  /* 启用弹性布局 */
+  align-items: center;
+  /* 垂直居中 */
+  justify-content: space-between;
+  /* 左右分布 */
+  padding: 0 20px;
+  /* 增加一些左右内边距 */
 }
 
-/* 顶部导航栏样式 */
-.top-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: #444;
-  /* 深色背景 */
+.logo {
+  font-size: 18px;
   color: white;
+  font-weight: bold;
+}
+
+.menu-right {
+  display: flex;
+  /* 子项横向排列 */
+  gap: 20px;
+  /* 菜单项之间的间距 */
+}
+
+.menu-right a {
+  color: white;
+  text-decoration: none;
+}
+
+.menu-right a:hover {
+  color: #1e90ff;
+}
+
+.el-menu {
+  display: flex;
+  align-items: center;
   position: fixed;
   top: 0;
   left: 0;
@@ -77,106 +124,41 @@ li {
   z-index: 1000;
   transition: top 0.3s;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  /* 阴影效果 */
 }
 
 .nav-hidden {
   top: -70px;
-  /* 隐藏导航栏 */
 }
 
-.top-nav ul {
-  display: flex;
-  list-style: none;
-}
-
-.top-nav ul li {
-  margin-right: 20px;
-}
-
-.top-nav ul li a {
-  color: white;
-  text-decoration: none;
-  transition: color 0.3s;
-  /* 链接颜色过渡效果 */
-}
-
-.top-nav ul li a:hover {
-  color: #1e90ff;
-  /* 悬停时链接颜色变化 */
+.content-padding {
+  padding-top: 70px;
+  padding-bottom: 60px;
 }
 
 .toggle-button {
   cursor: pointer;
-  display: none;
+  color: white;
 }
 
-/* 内容区域的样式 */
-.content-padding {
-  padding-top: 70px;
-  /* 导航栏高度 */
-  padding-bottom: 60px;
-  /* 留出底部导航栏的高度 */
-}
-
-/* 底部导航栏（手机设备） */
-.bottom-nav {
-  display: none;
+.van-tabbar {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  background-color: #444;
-  /* 深色背景 */
-  color: white;
   z-index: 1000;
-  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.3);
-  /* 阴影效果 */
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
 }
 
-.bottom-nav ul {
-  display: flex;
-  justify-content: space-around;
-  padding: 10px 0;
-}
-
-.bottom-nav ul li a {
-  color: white;
-  text-decoration: none;
-  transition: color 0.3s;
-  /* 链接颜色过渡效果 */
-}
-
-.bottom-nav ul li a:hover {
-  color: #1e90ff;
-  /* 悬停时链接颜色变化 */
+/* Tabbar图标大小自定义 */
+.van-icon {
+  margin-bottom: 4px;
 }
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .top-nav {
-    display: none;
-    /* 隐藏顶部导航栏 */
+  .van-icon {
+    margin-bottom: 4px;
   }
-
-  .toggle-button {
-    display: block;
-    /* 显示导航栏切换按钮 */
-  }
-
-  .bottom-nav {
-    display: block;
-    /* 显示底部导航栏 */
-  }
-
-  /* 移除内容区域的顶部边距 */
-  .content-padding {
-    padding-top: 0;
-    /* 在手机端移除上边距 */
-    padding-bottom: 60px;
-    /* 在手机端留出底部导航栏的高度 */
-  }
-
-
 }
 </style>
