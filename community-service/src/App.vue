@@ -17,13 +17,11 @@
     </div>
 
     <!-- 底部导航栏（手机设备） -->
-    <nav v-if="isMobile" class="bottom-nav">
-      <ul>
-        <li><router-link to="/">首页</router-link></li>
-        <li><router-link to="/discover">发现</router-link></li>
-        <li><router-link to="/profile">我的</router-link></li>
-      </ul>
-    </nav>
+    <van-tabbar v-if="isMobile" v-model="activeTab">
+      <van-tabbar-item to="/" icon="home-o">首页</van-tabbar-item>
+      <van-tabbar-item to="/discover" icon="search">发现</van-tabbar-item>
+      <van-tabbar-item to="/profile" icon="user-o">我的</van-tabbar-item>
+    </van-tabbar>
   </div>
 </template>
 
