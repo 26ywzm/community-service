@@ -16,7 +16,7 @@
             </ul>
         </div>
 
-        <div v-else>
+        <div v-else-if="loading">
             <p>正在加载订单信息...</p>
         </div>
 
@@ -25,51 +25,40 @@
 </template>
 
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+import { handleApiError } from '../utils/errorHandler';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
+    name: 'OrderDetail',
     data() {
         return {
-            order: null, // 存储订单详情
+            order: null,
+            loading: true
         };
     },
-    created() {
-        const orderId = this.$route.params.orderId; // 从路由获取订单 ID
-        // console.log('获取的 orderId:', orderId); // 打印 orderId
-        if (orderId && orderId !== ':orderId') {
-            this.fetchOrderDetails(orderId); // 获取订单详细信息
-        } else {
-            alert('订单 ID 无效');
-        }
+    async created() {
+        await this.fetchOrderDetails();
     },
     methods: {
-        async fetchOrderDetails(orderId) {
+        async fetchOrderDetails() {
+            const orderId = this.$route.params.orderId;
             try {
                 const response = await axios.get(`${API}/canteen/order/${orderId}`, {
                     headers: {
-                        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-                    },
+                        Authorization: `Bearer ${localStorage.getItem('authToken')}`
+                    }
                 });
-
-                // console.log('获取的订单信息:', response.data); // 打印订单信息
-
-                this.order = response.data; // 保存订单信息
-
-                // console.log('order email:', this.order.email); // 详细日志
-                // console.log('order status:', this.order.status); // 详细日志
-
+                this.order = response.data;
+                this.loading = false;
             } catch (error) {
-                console.error('获取订单详细信息失败:', error);
-                alert('获取订单信息失败，请重试。');
+                handleApiError(error);
             }
         },
-
         formatDate(dateString) {
             const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
             return new Date(dateString).toLocaleDateString('zh-CN', options); // 格式化日期
         },
-
         goBack() {
             this.$router.push('/discover'); // 返回到点餐页面
         }

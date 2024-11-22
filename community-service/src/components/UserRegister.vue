@@ -24,45 +24,47 @@
 </template>
 
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+import { handleApiError } from '../utils/errorHandler';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   name: 'UserRegister',
   data() {
     return {
-      username: '',         // 添加用户名字段
-      email: '',            // 使用 email 而不是 username
+      username: '',
+      email: '',
       password: '',
-      confirmPassword: '',  // 确认密码
+      confirmPassword: ''
     };
   },
   methods: {
     async register() {
-      // 确认密码匹配
       if (this.password !== this.confirmPassword) {
-        return alert('密码和确认密码不匹配。');
+        alert('两次输入的密码不一致');
+        return;
       }
 
       try {
-        const response = await axios.post(`${API}/register`, {
-          username: this.username, // 添加用户名到请求体
-          email: this.email,       // 发送 email 和 password
-          password: this.password,
+        await axios.post(`${API}/register`, {
+          username: this.username,
+          email: this.email,
+          password: this.password
         });
-        alert(response.data.message);
-        // 注册成功后的操作，如跳转到登录页面
-        this.$router.push('/login'); // 可选：注册成功后跳转到登录页面
+
+        alert('注册成功！请登录');
+        this.$router.push('/login');
       } catch (error) {
-        // 提供更详细的错误信息
-        if (error.response && error.response.data && error.response.data.message) {
-          alert(error.response.data.message);
-        } else {
-          alert('注册失败，请重试。');
-        }
+        handleApiError(error, () => {
+          if (error.response?.data?.message) {
+            alert(error.response.data.message);
+          } else {
+            alert('注册失败，请重试');
+          }
+        });
       }
-    },
-  },
+    }
+  }
 };
 </script>
 

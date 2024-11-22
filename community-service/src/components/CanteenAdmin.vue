@@ -51,6 +51,7 @@
 
 <script>
 import axios from 'axios';
+import { handleApiError } from '../utils/errorHandler';
 const BASE_URL = process.env.VUE_APP_BASE_URL;
 
 export default {
@@ -74,7 +75,7 @@ export default {
         const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`);
         this.menuItems = response.data; // 获取菜品数据
       } catch (error) {
-        console.error('获取菜单失败:', error);
+        handleApiError(error);
       }
     },
     async addMenuItem() {
@@ -92,7 +93,9 @@ export default {
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();
       } catch (error) {
-        console.error('添加菜品失败:', error);
+        handleApiError(error, () => {
+          alert('添加菜品失败，请重试');
+        });
       }
     },
     async deleteMenuItem(itemId) {
@@ -100,7 +103,9 @@ export default {
         await axios.delete(`${BASE_URL}/api/auth/canteen/menu/${itemId}`);
         this.fetchMenuItems(); // 刷新菜单列表
       } catch (error) {
-        console.error('删除菜品失败:', error);
+        handleApiError(error, () => {
+          alert('删除菜品失败，请重试');
+        });
       }
     },
     editMenuItem(item) {
@@ -122,7 +127,9 @@ export default {
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();
       } catch (error) {
-        console.error('更新菜品失败:', error);
+        handleApiError(error, () => {
+          alert('更新菜品失败，请重试');
+        });
       }
     },
     cancelEdit() {

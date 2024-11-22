@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <!-- 顶部导航栏（桌面和平板设备） -->
-    <el-menu v-if="!isMobile" :class="{ 'nav-hidden': isNavHidden }" mode="horizontal" background-color="#444"
+    <el-menu v-if="!isMobile" :default-active="activeIndex" :class="{ 'nav-hidden': isNavHidden }" mode="horizontal" background-color="#444"
       text-color="#fff" active-text-color="#1e90ff" class="top-menu">
       <div class="logo">社区服务</div>
       <div class="menu-right">
@@ -23,20 +23,20 @@
     </div>
 
     <!-- 底部导航栏（手机设备） -->
-    <van-tabbar v-if="isMobile" v-model="activeTab" active-color="#1e90ff" inactive-color="#999">
-      <van-tabbar-item replace :to="'/'">
+    <van-tabbar v-if="isMobile" v-model="currentTab" active-color="#1e90ff" inactive-color="#999">
+      <van-tabbar-item to="/">
         <template #icon>
           <van-icon name="home-o" size="24px" />
         </template>
         首页
       </van-tabbar-item>
-      <van-tabbar-item replace :to="'/discover'">
+      <van-tabbar-item to="/discover">
         <template #icon>
-          <van-icon name="search" size="24px" />
+          <van-icon name="apps-o" size="24px" />
         </template>
         发现
       </van-tabbar-item>
-      <van-tabbar-item replace :to="'/profile'">
+      <van-tabbar-item to="/profile">
         <template #icon>
           <van-icon name="user-o" size="24px" />
         </template>
@@ -50,33 +50,49 @@
 export default {
   data() {
     return {
-      isMobile: false, // 是否是手机端
-      activeTab: '/', // 当前激活的Tab
+      isMobile: false,
+      currentTab: 0,
+      isNavHidden: false,
+      lastScrollTop: 0,
+      activeIndex: '1',
     };
   },
   mounted() {
-    this.checkDevice(); // 检查设备
-    window.addEventListener('resize', this.checkDevice); // 监听窗口变化
-    this.syncActiveTab(); // 同步初始Tab状态
-  },
-  beforeUnmount() {
-    window.removeEventListener('resize', this.checkDevice);
+    this.checkDevice();
+    window.addEventListener('resize', this.checkDevice);
+    // 确保初始路由状态同步
+    this.currentTab = this.$route.path;
+    window.addEventListener('scroll', this.handleScroll);  // 添加滚动监听
   },
   watch: {
-    $route(to) {
-      // 监听路由变化，同步导航状态
-      this.activeTab = to.path;
-    },
+    // 监听路由变化
+    $route: {
+      immediate: true,
+      handler(to) {
+        // 根据路由路径设置当前激活的标签页
+        const routeMap = {
+          '/': 0,
+          '/discover': 1,
+          '/profile': 2
+        };
+        this.currentTab = routeMap[to.path] || 0;
+      }
+    }
   },
   methods: {
     checkDevice() {
       this.isMobile = window.innerWidth <= 768;
     },
-    syncActiveTab() {
-      // 初始激活状态同步
-      this.activeTab = this.$route.path;
-    },
-  },
+    handleScroll() {
+      const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      this.isNavHidden = currentScrollTop > this.lastScrollTop && currentScrollTop > 100;
+      this.lastScrollTop = currentScrollTop;
+    }
+  }
+  // beforeDestroy() {
+  //   window.removeEventListener('resize', this.checkDevice);
+  //   window.removeEventListener('scroll', this.handleScroll);  // 清理监听器
+  // }
 };
 </script>
 
@@ -160,5 +176,9 @@ export default {
   .van-icon {
     margin-bottom: 4px;
   }
+}
+
+.menu-right .router-link-active {
+  color: #1e90ff !important;
 }
 </style>

@@ -1,47 +1,56 @@
 const express = require('express');
-const mysql = require('mysql2');
-const authRoutes = require('./routes/auth');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const compression = require('compression');
+const morgan = require('morgan');
+const helmet = require('helmet');
+const { testConnection, initDatabase } = require('./db');
 
 // 初始化 dotenv 配置
-require('dotenv').config();
 dotenv.config();
 
-const app = express(); // 初始化 app
+const app = express();
 
-app.use(compression());
+// 基础中间件
+app.use(helmet()); // 安全中间件
+app.use(cors()); // 跨域中间件
+app.use(compression()); // 压缩中间件
+app.use(morgan('dev')); // 日志中间件
+app.use(express.json()); // JSON解析
+app.use(express.urlencoded({ extended: true })); // URL编码解析
 
-app.use(cors()); // 在 app 初始化后调用 cors
-app.use(express.json()); // 解析 JSON 请求体
-
-// 允许访问uploads目录中的文件
+// 静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 配置 MySQL 连接
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
-});
-
-// 测试数据库连接
-db.connect(err => {
-  if (err) {
-    console.error('数据库连接失败: ', err);
-    return;
-  }
-  console.log('成功连接到 MySQL 数据库');
-});
-
-// 使用 auth 路由
+// 路由
+const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// 错误处理中间件
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: '服务器错误' });
 });
+
+// 初始化数据库并启动服务器
+async function startServer() {
+    try {
+        // 测试数据库连接
+        await testConnection();
+        
+        // 初始化数据库表
+        await initDatabase();
+        
+        // 启动服务器
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`服务器运行在端口 ${PORT}`);
+        });
+    } catch (error) {
+        console.error('服务器启动失败:', error);
+        process.exit(1);
+    }
+}
+
+startServer();

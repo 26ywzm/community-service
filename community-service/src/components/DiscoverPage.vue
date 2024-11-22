@@ -30,7 +30,6 @@
       </div>
 
       <!-- 管理员和超级管理员可以看到的管理模块按钮 -->
-
       <div v-if="isSuperAdmin || isAdmin">
         <router-link to="/articles/new">
           <button>文章编写</button>
@@ -83,20 +82,19 @@
       </div>
     </div>
 
-
     <!-- 未登录用户 -->
     <div v-else>
       <p>请登录以查看内容。</p>
     </div>
   </div>
 
-
 </template>
 
-
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+import { verifyAuth } from '../utils/auth';
+import { handleApiError } from '../utils/errorHandler';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   data() {
@@ -104,7 +102,8 @@ export default {
       showAdminPanel: false,
       users: [],
       admins: [],
-      orders: [] // 在数据中新增 orders 来存储用户订单
+      orders: [], // 在数据中新增 orders 来存储用户订单
+      verificationInterval: null
     };
   },
   computed: {
@@ -124,29 +123,96 @@ export default {
       return !!localStorage.getItem('authToken'); // 检查是否登录
     },
   },
+  async created() {
+    // 只在登录状态下启动验证
+    if (this.isLoggedIn) {
+      this.startVerification();
+    }
+  },
+  watch: {
+    // 监听登录状态变化
+    isLoggedIn(newValue) {
+      if (newValue) {
+        // 登录后启动验证
+        this.startVerification();
+      } else {
+        // 登出后清除验证定时器
+        if (this.verificationInterval) {
+          clearInterval(this.verificationInterval);
+          this.verificationInterval = null;
+        }
+      }
+    }
+  },
+  beforeUnmount() {
+    // 组件销毁时清除定时器
+    if (this.verificationInterval) {
+      clearInterval(this.verificationInterval);
+    }
+  },
   methods: {
-    async fetchUsers() {
-      const response = await axios.get(`${API}/users`);
-      this.users = response.data;
+    startVerification() {
+      // 如果已经有定时器在运行，先清除它
+      if (this.verificationInterval) {
+        clearInterval(this.verificationInterval);
+      }
+      
+      // 立即进行一次验证
+      this.verifyAndUpdate();
+      
+      // 每5分钟验证一次
+      this.verificationInterval = setInterval(() => {
+        this.verifyAndUpdate();
+      }, 5 * 60 * 1000);
     },
-    async fetchAdmins() {
-      const response = await axios.get(`${API}/admins`);
-      this.admins = response.data;
-    },
-    async promoteUser(userId) {
-      // 仅超级管理员可以执行升降级操作
-      if (this.isSuperAdmin) {
-        await axios.post(`${API}/promote/${userId}`);
-        this.fetchUsers(); // 刷新用户列表
-        this.fetchAdmins(); // 刷新管理员列表
+    async verifyAndUpdate() {
+      // 如果未登录，不进行验证
+      if (!this.isLoggedIn) {
+        return;
+      }
+
+      const result = await verifyAuth();
+      if (!result.valid) {
+        switch (result.reason) {
+          case 'role-mismatch':
+            // 角色不匹配时，只更新角色不刷新页面
+            this.$forceUpdate();
+            break;
+          case 'no-token':
+          case 'invalid-token':
+          case 'unauthorized':
+            // 清除验证定时器
+            if (this.verificationInterval) {
+              clearInterval(this.verificationInterval);
+              this.verificationInterval = null;
+            }
+            break;
+          // 其他情况不做处理
+        }
       }
     },
-    async demoteUser(adminId) {
-      // 仅超级管理员可以执行升降级操作
-      if (this.isSuperAdmin) {
-        await axios.post(`${API}/demote/${adminId}`);
-        this.fetchUsers(); // 刷新用户列表
-        this.fetchAdmins(); // 刷新管理员列表
+    async fetchUsers() {
+      try {
+        const response = await axios.get(`${API}/users`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+        this.users = response.data.users; // 从 response.data.users 获取用户列表
+      } catch (error) {
+        handleApiError(error);
+      }
+    },
+    async fetchAdmins() {
+      try {
+        const response = await axios.get(`${API}/admins`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+        this.admins = response.data.admins; // 从 response.data.admins 获取管理员列表
+      } catch (error) {
+        handleApiError(error);
       }
     },
     async fetchUserOrders() {
@@ -158,23 +224,65 @@ export default {
         });
         this.orders = response.data; // 存储订单信息
       } catch (error) {
-        console.error('获取订单失败:', error);
-        alert('获取订单失败，请重试。');
+        handleApiError(error);
       }
     },
-    // 删除用户
-    async deleteUser(userId) {
-    if (this.isSuperAdmin) {
-      try {
-        await axios.delete(`${API}/users/${userId}`);
+    handleAuthError() {
+      // 清除所有认证信息
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('email');
+      
+      // 停止验证定时器
+      if (this.verificationInterval) {
+        clearInterval(this.verificationInterval);
+        this.verificationInterval = null;
+      }
+      
+      // 跳转到登录页面
+      this.$router.push('/login');
+    },
+    async promoteUser(userId) {
+      // 仅超级管理员可以执行升降级操作
+      if (this.isSuperAdmin) {
+        await axios.post(`${API}/promote/${userId}`, {}, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
         this.fetchUsers(); // 刷新用户列表
         this.fetchAdmins(); // 刷新管理员列表
-      } catch (error) {
-        console.error('删除用户失败:', error);
-        alert('删除用户失败，请重试。');
       }
-    }
-  },
+    },
+    async demoteUser(adminId) {
+      // 仅超级管理员可以执行升降级操作
+      if (this.isSuperAdmin) {
+        await axios.post(`${API}/demote/${adminId}`, {}, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+        this.fetchUsers(); // 刷新用户列表
+        this.fetchAdmins(); // 刷新管理员列表
+      }
+    },
+    async deleteUser(userId) {
+      if (this.isSuperAdmin) {
+        try {
+          await axios.delete(`${API}/users/${userId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+          this.fetchUsers(); // 刷新用户列表
+          this.fetchAdmins(); // 刷新管理员列表
+        } catch (error) {
+          handleApiError(error);
+        }
+      }
+    },
     viewOrderDetails(orderId) {
       this.$router.push({ name: 'OrderDetail', params: { orderId } });
     },

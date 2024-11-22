@@ -16,8 +16,9 @@
 </template>
 
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+import { handleApiError } from '../utils/errorHandler';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   name: 'UserLogin',
@@ -35,21 +36,25 @@ export default {
           password: this.password,
         });
 
-        // 登录成功后的操作
-        alert(response.data.message);
-        localStorage.setItem('authToken', response.data.token); // 保存 token
-        localStorage.setItem('userRole', response.data.role); // 保存角色信息
-        localStorage.setItem('username', this.email); // 也可以保存用户名
+        const { token, user } = response.data;
+        
+        // 存储认证信息
+        localStorage.setItem('authToken', token);
+        localStorage.setItem('userRole', user.role);
+        localStorage.setItem('username', user.username);
+        localStorage.setItem('userId', user.id);
+        localStorage.setItem('email', user.email);
 
-        this.$router.push('/profile'); // 跳转到用户个人中心页面
-      } catch (error) {
-        console.error('Login error:', error);
-        // 提供更详细的错误信息
-        if (error.response && error.response.data && error.response.data.message) {
-          alert(error.response.data.message);
+        // 根据角色重定向
+        if (user.role === 'admin' || user.role === 'super_admin') {
+          this.$router.push('/admin');
         } else {
-          alert('登录失败，请检查您的邮箱和密码。');
+          this.$router.push('/profile'); 
         }
+      } catch (error) {
+        handleApiError(error, () => {
+          alert('登录失败，请检查您的邮箱和密码。');
+        });
       }
     },
   },

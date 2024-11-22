@@ -13,10 +13,10 @@
       <p>邮箱: {{ user.email }}</p>
 
       <!-- 编辑按钮 -->
-      <button class="edit-button" @click="editProfile = true" v-if="!editProfile">编辑信息</button>
+      <button class="edit-button" @click="editMode = true" v-if="!editMode">编辑信息</button>
 
       <!-- 编辑表单 -->
-      <div v-if="editProfile">
+      <div v-if="editMode">
         <div class="form-group">
           <label>用户名：</label>
           <input type="text" v-model="user.username" />
@@ -26,8 +26,16 @@
           <input type="email" v-model="user.email" />
         </div>
         <div class="form-group">
+          <label>当前密码（必填）：</label>
+          <input type="password" v-model="currentPassword" />
+        </div>
+        <div class="form-group">
           <label>新密码（可选）：</label>
           <input type="password" v-model="newPassword" />
+        </div>
+        <div class="form-group">
+          <label>头像：</label>
+          <input type="file" @change="handleFileUpload" />
         </div>
         <button class="save-button" @click="updateProfile">保存</button>
         <button class="cancel-button" @click="cancelEdit">取消</button>
@@ -39,8 +47,9 @@
 </template>
 
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+import { handleApiError } from '../utils/errorHandler';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   name: 'UserProfile',
@@ -49,13 +58,71 @@ export default {
       isLoggedIn: false,
       user: {
         username: '',
-        email: ''
-      }, // 存储从后端获取的用户信息
-      newPassword: '', // 新密码字段（可选）
-      editProfile: false, // 是否在编辑模式
+        email: '',
+        role: '',
+        balance: 0
+      },
+      editMode: false,
+      currentPassword: '',
+      newPassword: '',
+      file: null
     };
   },
+  async created() {
+    await this.fetchUserProfile();
+  },
   methods: {
+    async fetchUserProfile() {
+      try {
+        const response = await axios.get(`${API}/me`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+        this.user = response.data.user;
+        this.isLoggedIn = true;
+      } catch (error) {
+        handleApiError(error);
+      }
+    },
+    async updateProfile() {
+      try {
+        const formData = new FormData();
+        formData.append('username', this.user.username);
+        formData.append('email', this.user.email);
+        if (this.currentPassword) {
+          formData.append('currentPassword', this.currentPassword);
+          formData.append('newPassword', this.newPassword);
+        }
+        if (this.file) {
+          formData.append('avatar', this.file);
+        }
+
+        await axios.put(`${API}/profile`, formData, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        alert('个人信息更新成功！');
+        this.editMode = false;
+        this.currentPassword = '';
+        this.newPassword = '';
+        this.file = null;
+      } catch (error) {
+        handleApiError(error, () => {
+          if (error.response?.data?.message) {
+            alert(error.response.data.message);
+          } else {
+            alert('更新失败，请重试');
+          }
+        });
+      }
+    },
+    handleFileUpload(event) {
+      this.file = event.target.files[0];
+    },
     goToLogin() {
       this.$router.push('/login');
     },
@@ -70,65 +137,14 @@ export default {
       alert('已退出登录');
       this.$router.push('/'); //跳转
     },
-    async fetchUserProfile() {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        this.isLoggedIn = false;
-        return;
-      }
-
-      try {
-        const response = await axios.get(`${API}/profile`, {
-          headers: {
-            Authorization: token,
-          },
-        });
-
-        this.user = response.data.user;
-        this.isLoggedIn = true;
-      } catch (error) {
-        console.error('获取用户信息失败:', error);
-        this.isLoggedIn = false;
-      }
-    },
-    async updateProfile() {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        return alert('请先登录');
-      }
-
-      try {
-        await axios.put(
-          `${API}/profile`,
-          {
-            username: this.user.username,
-            email: this.user.email,
-            password: this.newPassword, // 新密码（如果用户填写了）
-          },
-          {
-            headers: {
-              Authorization: token,
-            },
-          }
-        );
-
-        alert('用户信息已更新');
-        this.editProfile = false;
-        this.newPassword = ''; // 清除新密码字段
-      } catch (error) {
-        console.error('更新用户信息失败:', error);
-        alert('更新失败，请重试');
-      }
-    },
     cancelEdit() {
-      this.editProfile = false;
-      this.newPassword = ''; // 清除新密码字段
+      this.editMode = false;
+      this.currentPassword = '';
+      this.newPassword = '';
+      this.file = null;
       this.fetchUserProfile(); // 重新获取用户信息，恢复原始数据
     },
-  },
-  mounted() {
-    this.fetchUserProfile(); // 页面加载时调用 API 获取用户信息
-  },
+  }
 };
 </script>
 
