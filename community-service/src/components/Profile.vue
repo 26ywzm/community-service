@@ -8,9 +8,13 @@
       <button class="auth-button register-button" @click="goToRegister">注册</button>
     </div>
 
+    <div v-else-if="loading" class="loading-section">
+      <p>加载中...</p>
+    </div>
+
     <div v-else class="profile-section">
-      <h3>欢迎, {{ user.username }}</h3>
-      <p>邮箱: {{ user.email }}</p>
+      <h3>欢迎, {{ userInfo.username }}</h3>
+      <p>邮箱: {{ userInfo.email }}</p>
 
       <!-- 编辑按钮 -->
       <button class="edit-button" @click="editMode = true" v-if="!editMode">编辑信息</button>
@@ -19,11 +23,11 @@
       <div v-if="editMode">
         <div class="form-group">
           <label>用户名：</label>
-          <input type="text" v-model="user.username" />
+          <input type="text" v-model="userInfo.username" />
         </div>
         <div class="form-group">
           <label>邮箱：</label>
-          <input type="email" v-model="user.email" />
+          <input type="email" v-model="userInfo.email" />
         </div>
         <div class="form-group">
           <label>当前密码（必填）：</label>
@@ -37,8 +41,10 @@
           <label>头像：</label>
           <input type="file" @change="handleFileUpload" />
         </div>
-        <button class="save-button" @click="updateProfile">保存</button>
-        <button class="cancel-button" @click="cancelEdit">取消</button>
+        <div class="button-group">
+          <button class="save-button" @click="updateProfile">保存</button>
+          <button class="cancel-button" @click="cancelEdit">取消</button>
+        </div>
       </div>
 
       <button class="logout-button" @click="logout">退出登录</button>
@@ -55,8 +61,8 @@ export default {
   name: 'UserProfile',
   data() {
     return {
-      isLoggedIn: false,
-      user: {
+      isLoggedIn: !!localStorage.getItem('authToken'),
+      userInfo: {
         username: '',
         email: '',
         role: '',
@@ -65,31 +71,80 @@ export default {
       editMode: false,
       currentPassword: '',
       newPassword: '',
-      file: null
+      file: null,
+      loading: true
     };
   },
   async created() {
-    await this.fetchUserProfile();
+    // 从 localStorage 获取基本信息
+    const token = localStorage.getItem('authToken');
+    const role = localStorage.getItem('userRole');
+    const username = localStorage.getItem('username');
+    const email = localStorage.getItem('email');
+
+    if (!token) {
+      this.$router.push('/login');
+      return;
+    }
+
+    // 立即设置基本信息
+    this.userInfo = {
+      username: username || '',
+      email: email || '',
+      role: role || ''
+    };
+
+    // 异步加载完整用户信息
+    try {
+      await this.fetchUserProfile();
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+      if (error.response && error.response.status === 401) {
+        this.handleUnauthorized();
+      }
+    }
   },
   methods: {
     async fetchUserProfile() {
+      this.loading = true;
       try {
-        const response = await axios.get(`${API}/me`, {
+        const userId = localStorage.getItem('userId');
+        const response = await axios.get(`${API}/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`
           }
         });
-        this.user = response.data.user;
-        this.isLoggedIn = true;
+        
+        // 更新用户信息
+        this.userInfo = {
+          ...this.userInfo,
+          ...response.data
+        };
       } catch (error) {
-        handleApiError(error);
+        console.error('Error fetching user profile:', error);
+        throw error;
+      } finally {
+        this.loading = false;
       }
     },
+
+    handleUnauthorized() {
+      // 清除所有认证信息
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('email');
+      
+      // 跳转到登录页
+      this.$router.push('/login');
+    },
+
     async updateProfile() {
       try {
         const formData = new FormData();
-        formData.append('username', this.user.username);
-        formData.append('email', this.user.email);
+        formData.append('username', this.userInfo.username);
+        formData.append('email', this.userInfo.email);
         if (this.currentPassword) {
           formData.append('currentPassword', this.currentPassword);
           formData.append('newPassword', this.newPassword);
@@ -98,7 +153,7 @@ export default {
           formData.append('avatar', this.file);
         }
 
-        await axios.put(`${API}/profile`, formData, {
+        await axios.put(`${API}/me`, formData, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'multipart/form-data'
@@ -110,14 +165,9 @@ export default {
         this.currentPassword = '';
         this.newPassword = '';
         this.file = null;
+        await this.fetchUserProfile();
       } catch (error) {
-        handleApiError(error, () => {
-          if (error.response?.data?.message) {
-            alert(error.response.data.message);
-          } else {
-            alert('更新失败，请重试');
-          }
-        });
+        handleApiError(error);
       }
     },
     handleFileUpload(event) {
@@ -129,124 +179,131 @@ export default {
     goToRegister() {
       this.$router.push('/register');
     },
-    logout() {
-      localStorage.removeItem('authToken'); // 清除 token
-      localStorage.removeItem('userRole'); // 清除角色信息
-      localStorage.removeItem('username'); // 清除用户名
+    async logout() {
+      localStorage.removeItem('authToken');
       this.isLoggedIn = false;
-      alert('已退出登录');
-      this.$router.push('/'); //跳转
+      this.userInfo = {
+        username: '',
+        email: '',
+        role: '',
+        balance: 0
+      };
+      this.$router.push('/login');
     },
     cancelEdit() {
       this.editMode = false;
       this.currentPassword = '';
       this.newPassword = '';
       this.file = null;
-      this.fetchUserProfile(); // 重新获取用户信息，恢复原始数据
-    },
+      this.fetchUserProfile();
+    }
   }
 };
 </script>
 
 <style scoped>
-/* 基本容器样式 */
 .profile-container {
-  padding: 40px;
   max-width: 600px;
-  margin: 40px auto;
-  background-color: #f5f7fa;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.loading-section {
   text-align: center;
-  transition: all 0.3s ease;
+  padding: 20px;
+  color: #666;
 }
 
-/* 标题样式 */
-h2 {
+.loading-section p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.profile-section {
+  padding: 20px;
+}
+
+.auth-section {
+  text-align: center;
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
   color: #333;
-  margin-bottom: 20px;
-  font-size: 28px;
-  font-weight: 700;
 }
 
-/* 按钮样式 */
-.auth-button,
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.edit-button,
 .save-button,
 .cancel-button,
-.logout-button,
-.edit-button {
-  background-color: #007bff;
-  color: white;
-  padding: 10px 20px;
+.auth-button,
+.logout-button {
+  padding: 8px 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
-  margin: 10px;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-size: 14px;
+  transition: background-color 0.3s;
 }
 
-.auth-button:hover,
-.save-button:hover,
-.cancel-button:hover,
-.logout-button:hover,
-.edit-button:hover {
-  background-color: #0056b3;
-  transform: translateY(-2px);
+.edit-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.save-button {
+  background-color: #2196F3;
+  color: white;
+}
+
+.cancel-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.auth-button {
+  background-color: #2196F3;
+  color: white;
+  margin: 0 5px;
 }
 
 .register-button {
-  background-color: #28a745;
-}
-
-.register-button:hover {
-  background-color: #218838;
-}
-
-/* 输入框样式 */
-input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-  font-size: 16px;
-  transition: border-color 0.3s ease;
-}
-
-input:focus {
-  border-color: #007bff;
-}
-
-/* 登录成功后的个人信息区域 */
-.profile-section {
-  background-color: #ffffff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-  text-align: left;
-}
-
-.profile-section h3 {
-  color: #333;
-  margin-bottom: 10px;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.profile-section p {
-  color: #666;
-  font-size: 16px;
-  margin-bottom: 10px;
+  background-color: #4CAF50;
 }
 
 .logout-button {
-  background-color: #dc3545;
+  background-color: #f44336;
+  color: white;
+  margin-top: 20px;
 }
 
+.edit-button:hover,
+.save-button:hover,
+.cancel-button:hover,
+.auth-button:hover,
 .logout-button:hover {
-  background-color: #c82333;
+  opacity: 0.9;
 }
 </style>

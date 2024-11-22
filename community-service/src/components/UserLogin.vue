@@ -46,15 +46,36 @@ export default {
         localStorage.setItem('email', user.email);
 
         // 根据角色重定向
-        if (user.role === 'admin' || user.role === 'super_admin') {
-          this.$router.push('/admin');
-        } else {
-          this.$router.push('/profile'); 
+        switch(user.role) {
+          case 'super_admin':
+            await this.$router.push('/profile');
+            break;
+          case 'admin':
+            await this.$router.push('/profile');
+            break;
+          default:
+            await this.$router.push('/profile');
         }
+
       } catch (error) {
-        handleApiError(error, () => {
-          alert('登录失败，请检查您的邮箱和密码。');
-        });
+        // 根据错误类型显示不同的错误信息
+        if (error.response) {
+          // 服务器返回了错误响应
+          if (error.response.status === 401) {
+            alert('邮箱或密码错误，请重试。');
+          } else if (error.response.data && error.response.data.message) {
+            alert(error.response.data.message);
+          } else {
+            alert('登录失败，请稍后重试。');
+          }
+        } else if (error.request) {
+          // 请求已发出，但没有收到响应
+          alert('无法连接到服务器，请检查网络连接。');
+        } else {
+          // 请求配置出错
+          alert('登录请求出错，请稍后重试。');
+        }
+        handleApiError(error);
       }
     },
   },
