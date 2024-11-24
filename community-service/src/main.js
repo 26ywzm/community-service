@@ -7,7 +7,7 @@ import { Button, List, Tabbar, TabbarItem, Dialog, Form, Field, CellGroup } from
 import 'vant/lib/index.css';
 
 // 按需引入 Element Plus 组件
-import { ElMenu, ElMenuItem, ElButton } from 'element-plus';
+import { ElMenu, ElMenuItem, ElButton, ElDialog, ElMessage } from 'element-plus';
 import 'element-plus/dist/index.css';
 
 const app = createApp(App);
@@ -27,5 +27,7 @@ app.use(CellGroup);
 app.use(ElMenu);
 app.use(ElMenuItem);
 app.use(ElButton);
+app.use(ElDialog);
+app.use(ElMessage);
 
 app.mount('#app');
