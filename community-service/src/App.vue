@@ -23,23 +23,14 @@
     </div>
 
     <!-- 底部导航栏（手机设备） -->
-    <van-tabbar v-if="isMobile" v-model="currentTab" active-color="#1e90ff" inactive-color="#999">
-      <van-tabbar-item to="/">
-        <template #icon>
-          <van-icon name="home-o" size="24px" />
-        </template>
+    <van-tabbar v-if="isMobile" route>
+      <van-tabbar-item replace to="/" icon="home-o">
         首页
       </van-tabbar-item>
-      <van-tabbar-item to="/discover">
-        <template #icon>
-          <van-icon name="apps-o" size="24px" />
-        </template>
+      <van-tabbar-item replace to="/discover" icon="apps-o">
         发现
       </van-tabbar-item>
-      <van-tabbar-item to="/profile">
-        <template #icon>
-          <van-icon name="user-o" size="24px" />
-        </template>
+      <van-tabbar-item :to="profilePath" icon="user-o" @click="handleProfileClick">
         我的
       </van-tabbar-item>
     </van-tabbar>
@@ -51,33 +42,21 @@ export default {
   data() {
     return {
       isMobile: false,
-      currentTab: 0,
       isNavHidden: false,
       lastScrollTop: 0,
       activeIndex: '1',
     };
   },
+  computed: {
+    profilePath() {
+      const token = localStorage.getItem('authToken');
+      return token ? '/profile' : '/login';
+    }
+  },
   mounted() {
     this.checkDevice();
     window.addEventListener('resize', this.checkDevice);
-    // 确保初始路由状态同步
-    this.currentTab = this.$route.path;
-    window.addEventListener('scroll', this.handleScroll);  // 添加滚动监听
-  },
-  watch: {
-    // 监听路由变化
-    $route: {
-      immediate: true,
-      handler(to) {
-        // 根据路由路径设置当前激活的标签页
-        const routeMap = {
-          '/': 0,
-          '/discover': 1,
-          '/profile': 2
-        };
-        this.currentTab = routeMap[to.path] || 0;
-      }
-    }
+    window.addEventListener('scroll', this.handleScroll);
   },
   methods: {
     checkDevice() {
@@ -87,12 +66,16 @@ export default {
       const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
       this.isNavHidden = currentScrollTop > this.lastScrollTop && currentScrollTop > 100;
       this.lastScrollTop = currentScrollTop;
+    },
+    handleProfileClick() {
+      // 检查是否已登录
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        // 如果未登录，跳转到登录页面
+        this.$router.push('/login');
+      }
     }
   }
-  // beforeDestroy() {
-  //   window.removeEventListener('resize', this.checkDevice);
-  //   window.removeEventListener('scroll', this.handleScroll);  // 清理监听器
-  // }
 };
 </script>
 
