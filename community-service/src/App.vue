@@ -18,7 +18,7 @@
     </el-menu>
 
     <!-- 路由视图，展示每个页面的内容 -->
-    <div :class="{ 'content-padding': !isNavHidden && !isMobile }">
+    <div :class="{ 'content-padding': !isNavHidden && !isMobile }" style="margin-bottom: 60px;">
       <router-view />
     </div>
 
@@ -50,7 +50,7 @@ export default {
   computed: {
     profilePath() {
       const token = localStorage.getItem('authToken');
-      return token ? '/profile' : '/login';
+      return token ? '/profile' : '/profile';
     }
   },
   mounted() {
@@ -72,7 +72,7 @@ export default {
       const token = localStorage.getItem('authToken');
       if (!token) {
         // 如果未登录，跳转到登录页面
-        this.$router.push('/login');
+        this.$router.push('/profile');
       }
     }
   }
@@ -131,7 +131,6 @@ export default {
 
 .content-padding {
   padding-top: 70px;
-  padding-bottom: 60px;
 }
 
 .toggle-button {

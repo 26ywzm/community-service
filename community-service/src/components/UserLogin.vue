@@ -24,7 +24,7 @@ export default {
   name: 'UserLogin',
   data() {
     return {
-      email: '',   // 使用 email 而不是 username
+      email: '',   
       password: '',
     };
   },

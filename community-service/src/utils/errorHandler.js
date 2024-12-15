@@ -8,8 +8,8 @@ export const handleAuthError = () => {
   localStorage.removeItem('userId');
   localStorage.removeItem('email');
   
-  // 跳转到登录页面
-  router.push('/login');
+  // 跳转到我的页面
+  router.push('/profile');
 };
 
 export const handleApiError = (error, customErrorHandler) => {

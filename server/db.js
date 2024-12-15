@@ -37,9 +37,7 @@ async function initDatabase() {
                 username VARCHAR(255) NOT NULL,
                 password VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL,
-                role ENUM('user', 'admin', 'super_admin') DEFAULT 'user' NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                role ENUM('user', 'admin', 'super_admin') DEFAULT 'user' NOT NULL
             )
         `);
 

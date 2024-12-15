@@ -50,26 +50,26 @@ const loginLimiter = rateLimit({
   message: { message: '尝试次数过多，请15分钟后再试' }
 });
 
-// 密码验证函数
-const validatePassword = (password) => {
-  const errors = [];
-  if (password.length < 8) {
-    errors.push('密码长度至少8个字符');
-  }
-  if (!/[A-Z]/.test(password)) {
-    errors.push('密码必须包含至少一个大写字母');
-  }
-  if (!/[a-z]/.test(password)) {
-    errors.push('密码必须包含至少一个小写字母');
-  }
-  if (!/[0-9]/.test(password)) {
-    errors.push('密码必须包含至少一个数字');
-  }
-  return {
-    isValid: errors.length === 0,
-    errors: errors
-  };
-};
+// // 密码验证函数
+// const validatePassword = (password) => {
+//   const errors = [];
+//   if (password.length < 8) {
+//     errors.push('密码长度至少8个字符');
+//   }
+//   if (!/[A-Z]/.test(password)) {
+//     errors.push('密码必须包含至少一个大写字母');
+//   }
+//   if (!/[a-z]/.test(password)) {
+//     errors.push('密码必须包含至少一个小写字母');
+//   }
+//   if (!/[0-9]/.test(password)) {
+//     errors.push('密码必须包含至少一个数字');
+//   }
+//   return {
+//     isValid: errors.length === 0,
+//     errors: errors
+//   };
+// };
 
 // 邮箱验证函数
 const validateEmail = (email) => {
@@ -96,10 +96,10 @@ router.post('/register', async (req, res) => {
     }
 
     // 验证密码强度
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
-      throw new Error('密码不符合要求: ' + passwordValidation.errors.join(', '));
-    }
+    // const passwordValidation = validatePassword(password);
+    // if (!passwordValidation.isValid) {
+    //   throw new Error('密码不符合要求: ' + passwordValidation.errors.join(', '));
+    // }
 
     // 检查用户名是否已存在
     const [existingUsername] = await connection.query(
@@ -580,46 +580,36 @@ router.get('/admins', authenticateToken, async (req, res) => {
 router.post('/promote/:id', authenticateToken, async (req, res) => {
   const userId = req.params.id;
   const connection = await pool.getConnection();
-
   try {
     await connection.beginTransaction();
-
     // 只允许超级管理员进行角色升级
     if (req.user.role !== 'super_admin') {
       throw new Error('权限不足');
     }
-
     // 检查要升级的用户是否存在
     const [user] = await connection.query(
       'SELECT role FROM users WHERE id = ? FOR UPDATE',
       [userId]
     );
-
     if (user.length === 0) {
       throw new Error('用户不存在');
     }
-
     // 检查用户当前角色
     if (user[0].role !== 'user') {
       throw new Error('只能升级普通用户为管理员');
     }
-
     // 更新用户角色
     await connection.query(
-      'UPDATE users SET role = "admin", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      'UPDATE users SET role = "admin" WHERE id = ?',
       [userId]
     );
-
     await connection.commit();
-
     // 记录到系统日志
     console.log(`用户角色变更: ID ${userId} 从 user 升级为 admin, 操作者 ID: ${req.user.id}`);
-
     res.status(200).json({ 
       message: '用户已成功升级为管理员',
       user_id: userId
     });
-
   } catch (error) {
     await connection.rollback();
     console.error('升级用户角色失败:', error);
@@ -634,46 +624,36 @@ router.post('/promote/:id', authenticateToken, async (req, res) => {
 router.post('/demote/:id', authenticateToken, async (req, res) => {
   const userId = req.params.id;
   const connection = await pool.getConnection();
-
   try {
     await connection.beginTransaction();
-
     // 只允许超级管理员进行角色降级
     if (req.user.role !== 'super_admin') {
       throw new Error('权限不足');
     }
-
     // 检查要降级的用户是否存在
     const [user] = await connection.query(
       'SELECT role FROM users WHERE id = ? FOR UPDATE',
       [userId]
     );
-
     if (user.length === 0) {
       throw new Error('用户不存在');
     }
-
     // 检查用户当前角色
     if (user[0].role !== 'admin') {
       throw new Error('只能降级管理员为普通用户');
     }
-
     // 更新用户角色
     await connection.query(
-      'UPDATE users SET role = "user", updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      'UPDATE users SET role = "user" WHERE id = ?',
       [userId]
     );
-
     await connection.commit();
-
     // 记录到系统日志
     console.log(`用户角色变更: ID ${userId} 从 admin 降级为 user, 操作者 ID: ${req.user.id}`);
-
     res.status(200).json({ 
       message: '管理员已成功降级为普通用户',
       user_id: userId
     });
-
   } catch (error) {
     await connection.rollback();
     console.error('降级用户角色失败:', error);
@@ -1097,8 +1077,8 @@ router.post('/canteen/order', authenticateToken, async (req, res) => {
     // 添加订单详情
     for (const detail of orderDetails) {
       await connection.query(
-        'INSERT INTO order_details (order_id, menu_item_id, quantity, total_price) VALUES (?, ?, ?, ?)',
-        [orderId, detail.menuItemId, detail.quantity, detail.totalPrice]
+        'INSERT INTO order_details (order_id, menu_item_id, quantity, price, total_price) VALUES (?, ?, ?, ?, ?)',
+        [orderId, detail.menuItemId, detail.quantity, detail.price, detail.totalPrice]
       );
     }
 
@@ -1134,7 +1114,7 @@ router.get('/canteen/order/:id', authenticateToken, async (req, res) => {
     const orderQuery = `
       SELECT o.id, o.total_price, o.status,
              u.email, u.username,
-             oi.menu_item_id, oi.quantity, oi.total_price AS item_total,
+             oi.menu_item_id, oi.quantity, oi.price, oi.total_price AS item_total,
              m.name AS menu_item_name, m.price AS menu_item_price,
              m.image_url AS menu_item_image
       FROM orders o

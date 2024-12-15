@@ -82,7 +82,7 @@ export default {
 
     async checkout() {
       const orders = this.cart.map(cartItem => ({
-        menu_item_id: cartItem.id,
+        menuItemId: cartItem.id, // 修改字段名称
         quantity: cartItem.quantity,
         price: cartItem.price // 确保 price 字段有效
       }));
@@ -93,6 +93,7 @@ export default {
       }
 
       try {
+        console.log('Orders being sent:', orders); // 打印订单数据以调试
         const response = await axios.post(
           `${BASE_URL}/api/auth/canteen/order`,
           { items: orders },

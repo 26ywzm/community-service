@@ -83,24 +83,23 @@ export default {
     const email = localStorage.getItem('email');
 
     if (!token) {
-      this.$router.push('/login');
-      return;
-    }
+      this.isLoggedIn = false;
+    } else {
+      // 立即设置基本信息
+      this.userInfo = {
+        username: username || '',
+        email: email || '',
+        role: role || ''
+      };
 
-    // 立即设置基本信息
-    this.userInfo = {
-      username: username || '',
-      email: email || '',
-      role: role || ''
-    };
-
-    // 异步加载完整用户信息
-    try {
-      await this.fetchUserProfile();
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-      if (error.response && error.response.status === 401) {
-        this.handleUnauthorized();
+      // 异步加载完整用户信息
+      try {
+        await this.fetchUserProfile();
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+        if (error.response && error.response.status === 401) {
+          this.handleUnauthorized();
+        }
       }
     }
   },
@@ -136,8 +135,7 @@ export default {
       localStorage.removeItem('userId');
       localStorage.removeItem('email');
       
-      // 跳转到登录页
-      this.$router.push('/login');
+      this.isLoggedIn = false;
     },
 
     async updateProfile() {
@@ -188,7 +186,6 @@ export default {
         role: '',
         balance: 0
       };
-      this.$router.push('/login');
     },
     cancelEdit() {
       this.editMode = false;
