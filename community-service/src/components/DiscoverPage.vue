@@ -29,7 +29,7 @@
           <router-link to="/articles/new">
             <button class="admin-button">文章编写</button>
           </router-link>
-          <button @click="dialogVisible = true" class="admin-button">管理模块</button>
+          <button @click="openAdminPanel" class="admin-button" v-if="isSuperAdmin">管理模块</button>
         </div>
         
         <el-dialog
@@ -37,37 +37,41 @@
           title="管理模块"
           width="70%"
           :before-close="handleClose"
+          :close-on-click-modal="false"
         >
           <div class="admin-panel">
             <h3>管理员和用户列表</h3>
-            <div>
-              <h4>管理员列表</h4>
-              <ul class="list">
-                <li v-for="admin in admins" :key="admin.id">
-                  {{ admin.username }}
-                  <span v-if="isSuperAdmin">
-                    <button @click="demoteUser(admin.id)" class="action-button">降为用户</button>
-                    <button @click="deleteUser(admin.id)" class="close-button">删除</button>
-                  </span>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4>用户列表</h4>
-              <ul class="list">
-                <li v-for="user in users" :key="user.id">
-                  {{ user.username }}
-                  <span v-if="isSuperAdmin">
-                    <button @click="promoteUser(user.id)" class="action-button">升为管理员</button>
-                    <button @click="deleteUser(user.id)" class="close-button">删除</button>
-                  </span>
-                </li>
-              </ul>
+            <div v-loading="loading">
+              <div v-if="error" class="error-message">{{ error }}</div>
+              
+              <div v-else>
+                <h4>管理员列表</h4>
+                <ul class="list">
+                  <li v-for="admin in admins" :key="admin.id">
+                    {{ admin.username }}
+                    <span v-if="isSuperAdmin">
+                      <button @click="demoteUser(admin.id)" class="action-button">降为用户</button>
+                      <button @click="deleteUser(admin.id)" class="close-button">删除</button>
+                    </span>
+                  </li>
+                </ul>
+
+                <h4>用户列表</h4>
+                <ul class="list">
+                  <li v-for="user in users" :key="user.id">
+                    {{ user.username }}
+                    <span v-if="isSuperAdmin">
+                      <button @click="promoteUser(user.id)" class="action-button">升为管理员</button>
+                      <button @click="deleteUser(user.id)" class="close-button">删除</button>
+                    </span>
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
           <template #footer>
             <span class="dialog-footer">
-              <el-button @click="dialogVisible = false">关闭</el-button>
+              <el-button @click="closeDialog">关闭</el-button>
             </span>
           </template>
         </el-dialog>
@@ -107,6 +111,8 @@ export default {
       admins: [],
       orders: [],
       verificationInterval: null,
+      loading: false,
+      error: null
     };
   },
   computed: {
@@ -187,13 +193,42 @@ export default {
         handleApiError(error);
       }
     },
+    async openAdminPanel() {
+      this.dialogVisible = true;
+      await this.loadAdminData();
+    },
+    
+    async loadAdminData() {
+      this.loading = true;
+      this.error = null;
+      try {
+        await Promise.all([
+          this.fetchUsers(),
+          this.fetchAdmins()
+        ]);
+      } catch (error) {
+        console.error('加载数据失败:', error);
+        this.error = '加载数据失败，请重试';
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    closeDialog() {
+      this.dialogVisible = false;
+      this.error = null;
+    },
+
+    handleClose(done) {
+      this.error = null;
+      done();
+    },
     async promoteUser(userId) {
       if (this.isSuperAdmin) {
         try {
           await axios.post(`${API}/promote/${userId}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` } });
           ElMessage.success('用户已成功升级为管理员');
-          await this.fetchUsers();
-          await this.fetchAdmins();
+          await this.loadAdminData();
         } catch (error) {
           handleApiError(error);
           ElMessage.error('升级管理员失败，请稍后重试');
@@ -205,8 +240,7 @@ export default {
         try {
           await axios.post(`${API}/demote/${adminId}`, {}, { headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` } });
           ElMessage.success('管理员已成功降级为普通用户');
-          await this.fetchUsers();
-          await this.fetchAdmins();
+          await this.loadAdminData();
         } catch (error) {
           handleApiError(error);
           ElMessage.error('降级管理员失败，请稍后重试');
@@ -217,8 +251,7 @@ export default {
       if (this.isSuperAdmin) {
         try {
           await axios.delete(`${API}/users/${userId}`, { headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` } });
-          this.fetchUsers();
-          this.fetchAdmins();
+          await this.loadAdminData();
         } catch (error) {
           handleApiError(error);
         }
@@ -231,12 +264,9 @@ export default {
       const options = { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" };
       return new Date(dateString).toLocaleDateString("zh-CN", options);
     },
-    handleClose(done) {
-      done()
-    },
   },
   mounted() {
-    if (this.isAdmin || this.isSuperAdmin) {
+    if (this.isSuperAdmin) {
       this.fetchUsers();
       this.fetchAdmins();
     }
