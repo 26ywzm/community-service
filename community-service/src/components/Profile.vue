@@ -108,6 +108,7 @@ export default {
       this.loading = true;
       try {
         const userId = localStorage.getItem('userId');
+        console.log('Fetching user profile from:', `${API}/users/${userId}`);
         const response = await axios.get(`${API}/users/${userId}`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('authToken')}`
