@@ -13,14 +13,24 @@
     </div>
 
     <div v-else class="profile-section">
+      <div v-if="loadError" class="error-message">
+        {{ loadError }}
+        <button @click="retryLoad" class="retry-button">重试</button>
+      </div>
+
+      <div v-if="updateSuccess" class="success-message">
+        {{ updateSuccess }}
+      </div>
+
       <h3>欢迎, {{ userInfo.username }}</h3>
       <p>邮箱: {{ userInfo.email }}</p>
+      <p>角色: {{ formatRole(userInfo.role) }}</p>
 
       <!-- 编辑按钮 -->
       <button class="edit-button" @click="editMode = true" v-if="!editMode">编辑信息</button>
 
       <!-- 编辑表单 -->
-      <div v-if="editMode">
+      <div v-if="editMode" class="edit-form">
         <div class="form-group">
           <label>用户名：</label>
           <input type="text" v-model="userInfo.username" />
@@ -39,10 +49,12 @@
         </div>
         <div class="form-group">
           <label>头像：</label>
-          <input type="file" @change="handleFileUpload" />
+          <input type="file" @change="handleFileUpload" accept="image/*" />
         </div>
         <div class="button-group">
-          <button class="save-button" @click="updateProfile">保存</button>
+          <button class="save-button" @click="updateProfile" :disabled="loading">
+            {{ loading ? '保存中...' : '保存' }}
+          </button>
           <button class="cancel-button" @click="cancelEdit">取消</button>
         </div>
       </div>
@@ -72,7 +84,9 @@ export default {
       currentPassword: '',
       newPassword: '',
       file: null,
-      loading: true
+      loading: false,
+      loadError: '',
+      updateSuccess: ''
     };
   },
   async created() {
@@ -104,28 +118,78 @@ export default {
     }
   },
   methods: {
+    formatRole(role) {
+      const roleMap = {
+        'super_admin': '超级管理员',
+        'admin': '管理员',
+        'user': '普通用户'
+      };
+      return roleMap[role] || role;
+    },
+
+    async retryLoad() {
+      this.loadError = '';
+      await this.fetchUserProfile();
+    },
+
     async fetchUserProfile() {
       this.loading = true;
+      this.loadError = '';
       try {
-        const userId = localStorage.getItem('userId');
-        console.log('Fetching user profile from:', `${API}/users/${userId}`);
-        const response = await axios.get(`${API}/users/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`
-          }
-        });
+        const token = localStorage.getItem('authToken');
         
-        // 更新用户信息
-        this.userInfo = {
-          ...this.userInfo,
-          ...response.data
+        if (!token) {
+          console.warn('No auth token found, using local storage data');
+          this.useLocalStorageData();
+          return;
+        }
+
+        const requestConfig = {
+          method: 'get',
+          url: `${API}/me`,
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         };
+
+        const response = await axios(requestConfig);
+        console.log('Profile response:', {
+          status: response.status,
+          data: response.data
+        });
+
+        if (response.data && response.data.user) {
+          this.userInfo = response.data.user;
+        } else if (response.data) {
+          this.userInfo = response.data;
+        } else {
+          throw new Error('Invalid response format');
+        }
+
       } catch (error) {
         console.error('Error fetching user profile:', error);
-        throw error;
+        if (error.response) {
+          if (error.response.status === 401) {
+            this.handleUnauthorized();
+            return;
+          }
+          this.loadError = `加载失败: ${error.response.data.message || '服务器错误'}`;
+        } else {
+          this.loadError = '网络错误，请检查网络连接';
+        }
+        this.useLocalStorageData();
       } finally {
         this.loading = false;
       }
+    },
+
+    useLocalStorageData() {
+      this.userInfo = {
+        username: localStorage.getItem('username') || '',
+        email: localStorage.getItem('email') || '',
+        role: localStorage.getItem('userRole') || ''
+      };
     },
 
     handleUnauthorized() {
@@ -140,13 +204,17 @@ export default {
     },
 
     async updateProfile() {
+      this.loading = true;
+      this.updateSuccess = '';
       try {
         const formData = new FormData();
         formData.append('username', this.userInfo.username);
         formData.append('email', this.userInfo.email);
         if (this.currentPassword) {
           formData.append('currentPassword', this.currentPassword);
-          formData.append('newPassword', this.newPassword);
+          if (this.newPassword) {
+            formData.append('newPassword', this.newPassword);
+          }
         }
         if (this.file) {
           formData.append('avatar', this.file);
@@ -159,7 +227,7 @@ export default {
           }
         });
 
-        alert('个人信息更新成功！');
+        this.updateSuccess = '个人信息更新成功！';
         this.editMode = false;
         this.currentPassword = '';
         this.newPassword = '';
@@ -167,6 +235,8 @@ export default {
         await this.fetchUserProfile();
       } catch (error) {
         handleApiError(error);
+      } finally {
+        this.loading = false;
       }
     },
     handleFileUpload(event) {
@@ -302,6 +372,31 @@ export default {
 .cancel-button:hover,
 .auth-button:hover,
 .logout-button:hover {
+  opacity: 0.9;
+}
+
+.error-message {
+  color: #f44336;
+  margin-bottom: 10px;
+}
+
+.success-message {
+  color: #4CAF50;
+  margin-bottom: 10px;
+}
+
+.retry-button {
+  background-color: #2196F3;
+  color: white;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.retry-button:hover {
   opacity: 0.9;
 }
 </style>
