@@ -72,7 +72,11 @@ export default {
     },
     async fetchMenuItems() {
       try {
-        const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`);
+        const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
         this.menuItems = response.data; // 获取菜品数据
       } catch (error) {
         handleApiError(error);
@@ -89,22 +93,37 @@ export default {
       }
 
       try {
-        await axios.post(`${BASE_URL}/api/auth/canteen/menu`, formData);
+        await axios.post(`${BASE_URL}/api/auth/canteen/menu`, formData, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();
       } catch (error) {
-        handleApiError(error, () => {
-          alert('添加菜品失败，请重试');
+        handleApiError(error, {
+          suppressAuthError: true,
+          customErrorHandler: () => {
+            alert('添加菜品失败，请重试');
+          }
         });
       }
     },
     async deleteMenuItem(itemId) {
       try {
-        await axios.delete(`${BASE_URL}/api/auth/canteen/menu/${itemId}`);
+        await axios.delete(`${BASE_URL}/api/auth/canteen/menu/${itemId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
         this.fetchMenuItems(); // 刷新菜单列表
       } catch (error) {
-        handleApiError(error, () => {
-          alert('删除菜品失败，请重试');
+        handleApiError(error, {
+          suppressAuthError: true,
+          customErrorHandler: () => {
+            alert('删除菜品失败，请重试');
+          }
         });
       }
     },
@@ -123,12 +142,24 @@ export default {
       }
 
       try {
-        await axios.put(`${BASE_URL}/api/auth/canteen/menu/${this.newItem.id}`, formData);
+        await axios.put(
+          `${BASE_URL}/api/auth/canteen/menu/${this.newItem.id}`, 
+          formData,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();
       } catch (error) {
-        handleApiError(error, () => {
-          alert('更新菜品失败，请重试');
+        handleApiError(error, {
+          suppressAuthError: true,
+          customErrorHandler: () => {
+            alert('更新菜品失败，请重试');
+          }
         });
       }
     },
