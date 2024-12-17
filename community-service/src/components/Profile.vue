@@ -154,10 +154,10 @@ export default {
         };
 
         const response = await axios(requestConfig);
-        console.log('Profile response:', {
-          status: response.status,
-          data: response.data
-        });
+        // console.log('Profile response:', {
+        //   status: response.status,
+        //   data: response.data
+        // });
 
         if (response.data && response.data.user) {
           this.userInfo = response.data.user;

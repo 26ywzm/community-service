@@ -4,16 +4,24 @@
 
         <div v-if="order">
             <h3>订单 ID: {{ order.id }}</h3>
-            <p>用户邮箱: {{ order.email }}</p> <!-- 确认 order.email 是否存在 -->
-            <p>订单状态: {{ order.status }}</p> <!-- 确认 order.status 是否存在 -->
+            <p>用户邮箱: {{ order.email }}</p>
+            <p>用户名: {{ order.username }}</p>
+            <p>订单状态: {{ statusText[order.status] || '未知状态' }}</p>
             <p>总价格: {{ order.total_price }} 元</p>
-            <p>创建时间: {{ formatDate(order.created_at) }}</p>
             <h4>订单内容:</h4>
-            <ul>
-                <li v-for="detail in order.details" :key="detail.menu_item.id">
-                    {{ detail.menu_item.name }} ({{ detail.quantity }}): {{ detail.total_price }} 元
-                </li>
-            </ul>
+            <div v-if="order.items && order.items.length" class="order-items">
+                <div v-for="item in order.items" :key="item.menu_item_id" class="order-item">
+                    <div class="item-info">
+                        <span class="item-name">{{ item.name }}</span>
+                        <div class="item-details">
+                            <span class="item-quantity">数量: {{ item.quantity }}</span>
+                            <span class="item-price">单价: ¥{{ item.price }}</span>
+                            <span class="item-total">小计: ¥{{ item.quantity * item.price }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p v-else>暂无订单详情</p>
         </div>
 
         <div v-else-if="loading">
@@ -34,7 +42,13 @@ export default {
     data() {
         return {
             order: null,
-            loading: true
+            loading: true,
+            statusText: {
+                0: '待处理',
+                1: '处理中',
+                2: '已完成',
+                3: '已取消'
+            }
         };
     },
     async created() {
@@ -49,15 +63,46 @@ export default {
                         Authorization: `Bearer ${localStorage.getItem('authToken')}`
                     }
                 });
-                this.order = response.data;
+                const orderData = response.data;
+                
+                // 打印完整的订单数据
+                // console.log('完整的订单数据:', JSON.stringify(orderData, null, 2));
+                // console.log('订单对象的所有键:', Object.keys(orderData));
+                
+                if (orderData && orderData.user) {
+                    this.order = {
+                        ...orderData,
+                        email: orderData.user.email,
+                        username: orderData.user.username
+                    };
+                } else {
+                    this.order = orderData;
+                }
                 this.loading = false;
             } catch (error) {
+                console.error('获取订单详情失败:', error);
                 handleApiError(error);
             }
         },
         formatDate(dateString) {
-            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-            return new Date(dateString).toLocaleDateString('zh-CN', options); // 格式化日期
+            if (!dateString) return '暂无日期';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '无效日期';
+                
+                const options = { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: false 
+                };
+                return date.toLocaleString('zh-CN', options).replace(/\//g, '-');
+            } catch (error) {
+                console.error('日期格式化错误:', error);
+                return '日期格式错误';
+            }
         },
         goBack() {
             this.$router.push('/discover'); // 返回到点餐页面

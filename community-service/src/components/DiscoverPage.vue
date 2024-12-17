@@ -318,17 +318,32 @@ export default {
       this.$router.push({ name: "OrderDetail", params: { orderId } });
     },
     formatDate(dateString) {
-      const options = { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" };
-      return new Date(dateString).toLocaleDateString("zh-CN", options);
+      if (!dateString) return '感谢使用';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '--';
+        const options = { 
+          year: "numeric", 
+          month: "2-digit", 
+          day: "2-digit", 
+          hour: "2-digit", 
+          minute: "2-digit",
+          hour12: false 
+        };
+        return date.toLocaleString("zh-CN", options).replace(/\//g, '-');
+      } catch (error) {
+        console.error('日期格式化错误:', error);
+        return '--';
+      }
     },
     getOrderStatusText(status) {
       const statusMap = {
-        'pending': '待处理',
-        'processing': '处理中',
-        'completed': '已完成',
-        'cancelled': '已取消'
+        0: '待处理',
+        1: '处理中',
+        2: '已完成',
+        3: '已取消'
       };
-      return statusMap[status] || status;
+      return statusMap[status] || '未知状态';
     },
   },
   mounted() {
