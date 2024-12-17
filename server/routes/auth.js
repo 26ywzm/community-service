@@ -1070,7 +1070,7 @@ router.post('/canteen/order', authenticateToken, async (req, res) => {
     // 创建订单
     const [orderResult] = await connection.query(
       'INSERT INTO orders (user_id, total_price, status) VALUES (?, ?, ?)',
-      [userId, totalPrice, 'pending']
+      [userId, totalPrice, 0] // 0: pending
     );
     const orderId = orderResult.insertId;
 
@@ -1217,10 +1217,14 @@ router.get('/canteen/orders', authenticateToken, async (req, res) => {
 
   try {
     let query = `
-      SELECT o.id, o.total_price, o.status,
-             u.username, u.email
+      SELECT o.id, o.total_price, o.status, o.created_at,
+             u.username, u.email,
+             oi.menu_item_id, oi.quantity, oi.price as item_price,
+             mi.name as item_name
       FROM orders o
       JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_details oi ON o.id = oi.order_id
+      LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
       WHERE 1=1
     `;
     const queryParams = [];
@@ -1231,37 +1235,61 @@ router.get('/canteen/orders', authenticateToken, async (req, res) => {
     }
 
     if (startDate) {
-      query += ' AND o.id >= ?';
+      query += ' AND o.created_at >= ?';
       queryParams.push(startDate);
     }
 
     if (endDate) {
-      query += ' AND o.id <= ?';
+      query += ' AND o.created_at <= ?';
       queryParams.push(endDate);
     }
 
-    query += ' ORDER BY o.id DESC LIMIT ? OFFSET ?';
-    queryParams.push(parseInt(limit), offset);
+    query += ' ORDER BY o.id DESC';
+    
+    const [rawOrders] = await pool.query(query, queryParams);
+    
+    // 重组数据结构
+    const ordersMap = new Map();
+    rawOrders.forEach(row => {
+      if (!ordersMap.has(row.id)) {
+        ordersMap.set(row.id, {
+          id: row.id,
+          total_price: row.total_price,
+          status: row.status,
+          created_at: row.created_at,
+          username: row.username,
+          email: row.email,
+          items: []
+        });
+      }
+      
+      if (row.menu_item_id) {
+        const order = ordersMap.get(row.id);
+        order.items.push({
+          menu_item_id: row.menu_item_id,
+          name: row.item_name,
+          quantity: row.quantity,
+          price: row.item_price
+        });
+      }
+    });
 
-    const [orders] = await pool.query(query, queryParams);
+    // 转换为数组并分页
+    const allOrders = Array.from(ordersMap.values());
+    const startIndex = offset;
+    const endIndex = startIndex + parseInt(limit);
+    const paginatedOrders = allOrders.slice(startIndex, endIndex);
 
     // 获取总订单数
-    const [totalCount] = await pool.query(
-      `SELECT COUNT(DISTINCT o.id) as total 
-       FROM orders o 
-       WHERE 1=1 ${status ? 'AND status = ?' : ''} 
-       ${startDate ? 'AND id >= ?' : ''} 
-       ${endDate ? 'AND id <= ?' : ''}`,
-      queryParams.slice(0, -2)
-    );
+    const total = allOrders.length;
 
     res.status(200).json({
-      orders,
+      orders: paginatedOrders,
       pagination: {
-        total: totalCount[0].total,
+        total,
         current_page: parseInt(page),
         per_page: parseInt(limit),
-        total_pages: Math.ceil(totalCount[0].total / limit)
+        total_pages: Math.ceil(total / limit)
       }
     });
   } catch (error) {
@@ -1281,7 +1309,7 @@ router.put('/canteen/orders/:id', authenticateToken, async (req, res) => {
   }
 
   // 验证状态值
-  const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+  const validStatuses = [0, 1, 2, 3];  // 0: pending, 1: confirmed, 2: completed, 3: cancelled
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ 
       message: '无效的状态值',
@@ -1305,7 +1333,7 @@ router.put('/canteen/orders/:id', authenticateToken, async (req, res) => {
 
     // 检查状态转换是否有效
     const currentStatus = orderExists[0].status;
-    if (currentStatus === 'completed' || currentStatus === 'cancelled') {
+    if (currentStatus === 2 || currentStatus === 3) {
       throw new Error(`无法更新${currentStatus}状态的订单`);
     }
 

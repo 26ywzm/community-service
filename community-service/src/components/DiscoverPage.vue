@@ -13,12 +13,25 @@
       </div>
 
       <!-- 用户订单列表 -->
-      <div v-if="orders.length > 0">
+      <div v-if="orders.length > 0" class="orders-section">
         <h3>我的订单</h3>
-        <ul class="list">
-          <li v-for="order in orders" :key="order.id">
-            订单 ID: {{ order.id }}, 总价格: {{ order.total_price }} 元, 创建时间: {{ formatDate(order.created_at) }}
-            <button @click="viewOrderDetails(order.id)" class="action-button">查看详情</button>
+        <ul class="order-list">
+          <li v-for="order in orders" :key="order.id" class="order-item">
+            <div class="order-info">
+              <div class="order-header">
+                <span class="order-id">订单号: {{ order.id }}</span>
+                <span class="order-status" :class="order.status">
+                  {{ getOrderStatusText(order.status) }}
+                </span>
+              </div>
+              <div class="order-details">
+                <span class="order-price">总价: ¥{{ order.total_price }}</span>
+                <span class="order-date">{{ formatDate(order.created_at) }}</span>
+              </div>
+            </div>
+            <div class="order-actions">
+              <button @click="viewOrderDetails(order.id)" class="view-button">查看详情</button>
+            </div>
           </li>
         </ul>
       </div>
@@ -29,7 +42,7 @@
           <router-link to="/articles/new">
             <button class="admin-button">文章编写</button>
           </router-link>
-          <button @click="openAdminPanel" class="admin-button" v-if="isSuperAdmin">管理模块</button>
+          <button @click="openAdminPanel" class="admin-button" v-if="isAdmin || isSuperAdmin">管理模块</button>
         </div>
         
         <el-dialog
@@ -46,24 +59,42 @@
               
               <div v-else>
                 <h4>管理员列表</h4>
+                <div class="role-info" v-if="isAdmin && !isSuperAdmin">
+                  <el-alert
+                    title="提示：您可以查看用户列表，但只有超级管理员可以修改权限"
+                    type="info"
+                    :closable="false"
+                    show-icon
+                  />
+                </div>
                 <ul class="list">
-                  <li v-for="admin in admins" :key="admin.id">
-                    {{ admin.username }}
-                    <span v-if="isSuperAdmin">
-                      <button @click="demoteUser(admin.id)" class="action-button">降为用户</button>
-                      <button @click="deleteUser(admin.id)" class="close-button">删除</button>
-                    </span>
+                  <li v-for="admin in admins" :key="admin.id" class="user-item">
+                    <div class="user-info">
+                      <span class="username">{{ admin.username }}</span>
+                      <span class="role-tag" :class="{ 'super': admin.role === 'super_admin' }">
+                        {{ admin.role === 'super_admin' ? '超级管理员' : '管理员' }}
+                      </span>
+                    </div>
+                    <div class="action-buttons" v-if="isSuperAdmin">
+                      <button @click="demoteUser(admin.id)" class="action-button" 
+                              v-if="admin.role !== 'super_admin'">降为用户</button>
+                      <button @click="deleteUser(admin.id)" class="close-button"
+                              v-if="admin.role !== 'super_admin'">删除</button>
+                    </div>
                   </li>
                 </ul>
 
                 <h4>用户列表</h4>
                 <ul class="list">
-                  <li v-for="user in users" :key="user.id">
-                    {{ user.username }}
-                    <span v-if="isSuperAdmin">
+                  <li v-for="user in users" :key="user.id" class="user-item">
+                    <div class="user-info">
+                      <span class="username">{{ user.username }}</span>
+                      <span class="role-tag">用户</span>
+                    </div>
+                    <div class="action-buttons" v-if="isSuperAdmin">
                       <button @click="promoteUser(user.id)" class="action-button">升为管理员</button>
                       <button @click="deleteUser(user.id)" class="close-button">删除</button>
-                    </span>
+                    </div>
                   </li>
                 </ul>
               </div>
@@ -168,9 +199,13 @@ export default {
         const response = await axios.get(`${API}/orders/user`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
-        this.orders = response.data;
+        this.orders = response.data.orders || response.data || [];
+        if (this.orders.length === 0) {
+          ElMessage.info('暂无订单记录');
+        }
       } catch (error) {
-        handleApiError(error);
+        console.error('获取订单失败:', error);
+        ElMessage.error('获取订单列表失败，请重试');
       }
     },
     async fetchUsers() {
@@ -178,19 +213,35 @@ export default {
         const response = await axios.get(`${API}/users`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
-        this.users = response.data.users;
+        this.users = response.data.users || response.data;
       } catch (error) {
-        handleApiError(error);
+        console.error('获取用户列表失败:', error);
+        if (error.response?.status === 403) {
+          ElMessage.warning('您只有查看权限');
+        } else {
+          ElMessage.error('获取用户列表失败，请重试');
+        }
       }
     },
     async fetchAdmins() {
       try {
-        const response = await axios.get(`${API}/admins`, {
+        // 使用users接口，但是过滤出管理员
+        const response = await axios.get(`${API}/users`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+          params: { role: 'admin' }  // 添加查询参数来获取管理员
         });
-        this.admins = response.data.admins;
+        const allUsers = response.data.users || response.data;
+        // 过滤出管理员和超级管理员
+        this.admins = allUsers.filter(user => 
+          user.role === 'admin' || user.role === 'super_admin'
+        );
       } catch (error) {
-        handleApiError(error);
+        console.error('获取管理员列表失败:', error);
+        if (error.response?.status === 403) {
+          ElMessage.warning('您只有查看权限');
+        } else {
+          ElMessage.error('获取管理员列表失败，请重试');
+        }
       }
     },
     async openAdminPanel() {
@@ -202,10 +253,16 @@ export default {
       this.loading = true;
       this.error = null;
       try {
-        await Promise.all([
+        const results = await Promise.allSettled([
           this.fetchUsers(),
           this.fetchAdmins()
         ]);
+        
+        // 检查是否所有请求都失败了
+        const allFailed = results.every(result => result.status === 'rejected');
+        if (allFailed) {
+          this.error = '加载数据失败，请重试';
+        }
       } catch (error) {
         console.error('加载数据失败:', error);
         this.error = '加载数据失败，请重试';
@@ -264,6 +321,15 @@ export default {
       const options = { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" };
       return new Date(dateString).toLocaleDateString("zh-CN", options);
     },
+    getOrderStatusText(status) {
+      const statusMap = {
+        'pending': '待处理',
+        'processing': '处理中',
+        'completed': '已完成',
+        'cancelled': '已取消'
+      };
+      return statusMap[status] || status;
+    },
   },
   mounted() {
     if (this.isSuperAdmin) {
@@ -281,43 +347,110 @@ export default {
   border-radius: 8px;
 }
 
+.role-info {
+  margin: 10px 0;
+  padding: 10px;
+}
+
+.error-message {
+  color: #f56c6c;
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #fef0f0;
+  border-radius: 4px;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.username {
+  font-weight: 500;
+  color: #303133;
+}
+
+.role-tag {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background-color: #e1f3d8;
+  color: #67c23a;
+}
+
+.role-tag.super {
+  background-color: #ffd04b;
+  color: #b88230;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 .title {
-  font-size: 24px;
-  color: #333;
+  color: #303133;
   margin-bottom: 20px;
-  text-align: center;
 }
 
 .button-group {
-  text-align: center;
-  margin-bottom: 15px;
+  margin: 15px 0;
+  display: flex;
+  gap: 10px;
 }
 
-.action-button,
-.admin-button,
-.close-button {
-  background-color: #007bff;
-  color: white;
+.admin-button {
   padding: 10px 20px;
-  margin: 5px;
-  border-radius: 5px;
+  background-color: #409eff;
+  color: white;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
-.action-button:hover,
-.admin-button:hover,
-.close-button:hover {
-  background-color: #0056b3;
+.admin-button:hover {
+  background-color: #66b1ff;
 }
 
-.admin-panel {
-  margin-top: 20px;
-  padding: 15px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.action-button {
+  padding: 5px 10px;
+  background-color: #67c23a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-button:hover {
+  background-color: #85ce61;
+}
+
+.close-button {
+  padding: 5px 10px;
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.close-button:hover {
+  background-color: #f78989;
 }
 
 .list {
@@ -325,9 +458,106 @@ export default {
   padding: 0;
 }
 
-.list li {
+.admin-panel {
+  padding: 20px;
+}
+
+.orders-section {
+  margin-top: 20px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.order-list {
+  list-style: none;
+  padding: 0;
+}
+
+.order-item {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 15px;
   margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s;
+}
+
+.order-item:hover {
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+}
+
+.order-info {
+  flex: 1;
+}
+
+.order-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.order-id {
+  font-weight: 500;
+  color: #303133;
+  margin-right: 15px;
+}
+
+.order-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.order-status.pending {
+  background-color: #e6a23c1a;
+  color: #e6a23c;
+}
+
+.order-status.completed {
+  background-color: #67c23a1a;
+  color: #67c23a;
+}
+
+.order-status.cancelled {
+  background-color: #f56c6c1a;
+  color: #f56c6c;
+}
+
+.order-details {
+  display: flex;
+  gap: 15px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.order-price {
+  color: #f56c6c;
+  font-weight: 500;
+}
+
+.order-date {
+  color: #909399;
+}
+
+.order-actions {
+  margin-left: 15px;
+}
+
+.view-button {
+  padding: 5px 15px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.view-button:hover {
+  background-color: #66b1ff;
 }
 </style>
