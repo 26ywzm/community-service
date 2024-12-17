@@ -1,34 +1,47 @@
 <template>
     <div class="order-detail">
-        <h2>订单详细信息</h2>
+        <el-card>
+            <template #header>
+                <div class="card-header">
+                    <el-page-header @back="goBack" title="返回" content="订单详情" />
+                </div>
+            </template>
 
-        <div v-if="order">
-            <h3>订单 ID: {{ order.id }}</h3>
-            <p>用户邮箱: {{ order.email }}</p>
-            <p>用户名: {{ order.username }}</p>
-            <p>订单状态: {{ statusText[order.status] || '未知状态' }}</p>
-            <p>总价格: {{ order.total_price }} 元</p>
-            <h4>订单内容:</h4>
-            <div v-if="order.items && order.items.length" class="order-items">
-                <div v-for="item in order.items" :key="item.menu_item_id" class="order-item">
-                    <div class="item-info">
-                        <span class="item-name">{{ item.name }}</span>
-                        <div class="item-details">
-                            <span class="item-quantity">数量: {{ item.quantity }}</span>
-                            <span class="item-price">单价: ¥{{ item.price }}</span>
-                            <span class="item-total">小计: ¥{{ item.quantity * item.price }}</span>
+            <div v-if="order" class="order-content">
+                <div class="info-list">
+                    <div class="info-item">订单编号：{{ order.id }}</div>
+                    <div class="info-item">用户名：{{ order.username }}</div>
+                    <div class="info-item">邮箱：{{ order.email }}</div>
+                    <div class="info-item">
+                        订单状态：
+                        <el-tag :type="getStatusType(order.status)">
+                            {{ statusText[order.status] || '未知状态' }}
+                        </el-tag>
+                    </div>
+                    <div class="info-item">总价格：<span class="price">¥{{ order.total_price }}</span></div>
+                </div>
+
+                <div v-if="order.items && order.items.length" class="order-items">
+                    <h3>订单商品</h3>
+                    <div class="items-list">
+                        <div v-for="item in order.items" 
+                             :key="item.menu_item_id" 
+                             class="item">
+                            <div class="item-name">{{ item.name }}</div>
+                            <div class="item-info">
+                                <span>数量：{{ item.quantity }}</span>
+                                <span>单价：¥{{ item.price }}</span>
+                                <span class="subtotal">小计：¥{{ (item.quantity * item.price).toFixed(2) }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <p v-else>暂无订单详情</p>
-        </div>
 
-        <div v-else-if="loading">
-            <p>正在加载订单信息...</p>
-        </div>
-
-        <button @click="goBack">返回</button>
+            <div v-else-if="loading" class="loading-wrapper">
+                <el-empty description="正在加载订单信息..." />
+            </div>
+        </el-card>
     </div>
 </template>
 
@@ -55,6 +68,15 @@ export default {
         await this.fetchOrderDetails();
     },
     methods: {
+        getStatusType(status) {
+            const typeMap = {
+                0: 'info',    // 待处理
+                1: 'warning', // 处理中
+                2: 'success', // 已完成
+                3: 'danger'   // 已取消
+            };
+            return typeMap[status] || 'info';
+        },
         async fetchOrderDetails() {
             const orderId = this.$route.params.orderId;
             try {
@@ -64,10 +86,6 @@ export default {
                     }
                 });
                 const orderData = response.data;
-                
-                // 打印完整的订单数据
-                // console.log('完整的订单数据:', JSON.stringify(orderData, null, 2));
-                // console.log('订单对象的所有键:', Object.keys(orderData));
                 
                 if (orderData && orderData.user) {
                     this.order = {
@@ -105,7 +123,7 @@ export default {
             }
         },
         goBack() {
-            this.$router.push('/discover'); // 返回到点餐页面
+            this.$router.push('/discover');
         }
     }
 };
@@ -113,19 +131,76 @@ export default {
 
 <style scoped>
 .order-detail {
-    padding: 20px;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 20px;
 }
 
-button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 5px;
+.order-content {
+    padding: 20px 0;
 }
 
-button:hover {
-    background-color: #45a049;
+.info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.info-item {
+    padding: 12px 0;
+    border-bottom: 1px solid #ebeef5;
+    color: #606266;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.price {
+    color: #f56c6c;
+    font-weight: 500;
+}
+
+.order-items {
+    margin-top: 30px;
+}
+
+.order-items h3 {
+    margin-bottom: 20px;
+    color: #303133;
+}
+
+.items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.item {
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.item-name {
+    font-size: 16px;
+    color: #303133;
+    margin-bottom: 8px;
+}
+
+.item-info {
+    display: flex;
+    gap: 24px;
+    color: #606266;
+}
+
+.subtotal {
+    color: #409EFF;
+    font-weight: 500;
+}
+
+.loading-wrapper {
+    padding: 40px;
+    text-align: center;
 }
 </style>
