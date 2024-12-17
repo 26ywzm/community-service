@@ -3,18 +3,20 @@
     <h2>社区食堂</h2>
 
     <!-- 菜品列表 -->
-    <div v-if="menuItems.length > 0">
+    <div v-if="menuItems.length > 0" class="menu-list">
       <div v-for="item in menuItems" :key="item.id" class="menu-item">
         <img :src="getImageUrl(item.image_url)" alt="菜品图片" />
-        <h3>{{ item.name }}</h3>
-        <p>{{ item.description }}</p>
-        <p>价格: {{ item.price }} 元</p>
+        <div class="menu-item-info">
+          <h3>{{ item.name }}</h3>
+          <p class="description">{{ item.description }}</p>
+          <p class="price">价格: {{ item.price }} 元</p>
 
-        <!-- 订餐数量输入框 -->
-        <input type="number" v-model.number="item.quantity" min="1" placeholder="订购数量" />
-
-        <!-- 加入购物车按钮 -->
-        <button @click="addToCart(item)">加入购物车</button>
+          <!-- 订餐数量输入框 -->
+          <div class="quantity-selector">
+            <input type="number" v-model.number="item.quantity" min="1" placeholder="订购数量" />
+            <button @click="addToCart(item)" class="add-to-cart-btn">加入购物车</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -23,25 +25,28 @@
     </div>
 
     <!-- 购物车 -->
-    <div v-if="cart.length > 0">
+    <div v-if="cart.length > 0" class="cart">
       <h3>购物车</h3>
       <ul>
-        <li v-for="(cartItem, index) in cart" :key="cartItem.id">
-          {{ cartItem.name }} ({{ cartItem.quantity }}): {{ cartItem.price * cartItem.quantity }} 元
-          <button @click="removeFromCart(index)">删除</button>
+        <li v-for="(cartItem, index) in cart" :key="cartItem.id" class="cart-item">
+          <span>{{ cartItem.name }} ({{ cartItem.quantity }}): {{ cartItem.price * cartItem.quantity }} 元</span>
+          <button @click="removeFromCart(index)" class="remove-btn">删除</button>
         </li>
       </ul>
+      <div class="cart-footer">
+        <button @click="checkout" class="checkout-btn">结账</button>
+      </div>
     </div>
-
-    <!-- 结账按钮 -->
-    <button @click="checkout">结账</button>
+    <div v-else>
+      <p>购物车为空。</p>
+    </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
 
-const BASE_URL = process.env.VUE_APP_BASE_URL; // 确保 BASE_URL 正确指向你的服务器地址
+const BASE_URL = process.env.VUE_APP_BASE_URL;
 
 export default {
   data() {
@@ -56,7 +61,7 @@ export default {
   methods: {
     async fetchMenuItems() {
       try {
-        const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`); // 请求可用菜单项
+        const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`);
         this.menuItems = response.data.map(item => ({ ...item, quantity: 1 })); // 添加 quantity 字段并设置默认值为1
       } catch (error) {
         console.error('获取菜单失败:', error);
@@ -69,7 +74,7 @@ export default {
       if (existingItem) {
         existingItem.quantity += item.quantity; // 更新数量
       } else {
-        this.cart.push({ ...item }); // 将菜品添加到购物车
+        this.cart.push({ ...item });
       }
       item.quantity = 1; // 重置输入框为1
       alert(`${item.name} 已加入购物车！`);
@@ -82,9 +87,9 @@ export default {
 
     async checkout() {
       const orders = this.cart.map(cartItem => ({
-        menuItemId: cartItem.id, // 修改字段名称
+        menuItemId: cartItem.id, 
         quantity: cartItem.quantity,
-        price: cartItem.price // 确保 price 字段有效
+        price: cartItem.price 
       }));
 
       if (orders.length === 0) {
@@ -93,7 +98,7 @@ export default {
       }
 
       try {
-        console.log('Orders being sent:', orders); // 打印订单数据以调试
+        console.log('Orders being sent:', orders);
         const response = await axios.post(
           `${BASE_URL}/api/auth/canteen/order`,
           { items: orders },
@@ -114,10 +119,8 @@ export default {
 
     getImageUrl(path) {
       if (path.startsWith('http')) {
-        // 如果已经是完整URL直接返回
         return path;
       }
-      // 拼接完整URL
       return `${BASE_URL}${path}`;
     }
   }
@@ -127,20 +130,77 @@ export default {
 <style scoped>
 .canteen-order {
   padding: 20px;
+  font-family: 'Arial', sans-serif;
 }
 
-.menu-item {
-  border: 1px solid #ccc;
-  padding: 10px;
+h2 {
+  font-size: 2rem;
+  color: #333;
   margin-bottom: 20px;
 }
 
-img {
-  max-width: 100px;
-  margin-right: 20px;
+.menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
 }
 
-button {
+.menu-item {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.menu-item:hover {
+  transform: translateY(-5px);
+}
+
+.menu-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+.menu-item-info {
+  padding: 10px;
+}
+
+.menu-item-info h3 {
+  font-size: 1.5rem;
+  margin: 10px 0;
+}
+
+.menu-item-info .description {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 10px 0;
+}
+
+.menu-item-info .price {
+  font-size: 1.2rem;
+  color: #4CAF50;
+  font-weight: bold;
+}
+
+.quantity-selector {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.quantity-selector input {
+  width: 50px;
+  padding: 5px;
+  margin-right: 10px;
+  font-size: 1rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.add-to-cart-btn {
   background-color: #4CAF50;
   color: white;
   border: none;
@@ -149,7 +209,56 @@ button {
   border-radius: 5px;
 }
 
-button:hover {
+.add-to-cart-btn:hover {
   background-color: #45a049;
+}
+
+.cart {
+  margin-top: 30px;
+}
+
+.cart-item {
+  padding: 10px;
+  background-color: #f9f9f9;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.remove-btn {
+  background-color: #f44336;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.remove-btn:hover {
+  background-color: #e53935;
+}
+
+.checkout-btn {
+  background-color: #2196F3;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.checkout-btn:hover {
+  background-color: #1976D2;
+}
+
+button {
+  font-size: 1rem;
 }
 </style>

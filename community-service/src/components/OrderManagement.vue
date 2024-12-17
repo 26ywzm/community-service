@@ -3,76 +3,57 @@
     <h2>订单管理</h2>
     <div v-if="loading" class="loading">加载中...</div>
     <div v-else>
-      <table>
-        <thead>
-          <tr>
-            <th>订单ID</th>
-            <th>用户名</th>
-            <th>订单详情</th>
-            <th>总价</th>
-            <th>状态</th>
-            <th>创建时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="order in orders" :key="order.id">
-            <td>{{ order.id }}</td>
-            <td>
-              <div class="user-info">
-                <div>{{ order.username }}</div>
-                <div class="email">{{ order.email }}</div>
-              </div>
-            </td>
-            <td>
-              <div class="order-items">
-                <div v-for="item in order.items" :key="item.menu_item_id" class="order-item">
-                  <div class="item-info">
-                    <span class="item-name">{{ item.name }}</span>
-                    <div class="item-details">
-                      <span class="item-quantity">数量: {{ item.quantity }}</span>
-                      <span class="item-price">单价: ¥{{ item.price }}</span>
-                      <span class="item-total">小计: ¥{{ item.quantity * item.price }}</span>
-                    </div>
-                  </div>
+      <!-- 订单卡片布局 -->
+      <div class="order-cards">
+        <div v-for="order in orders" :key="order.id" class="order-card">
+          <h3>订单ID: {{ order.id }}</h3>
+          <div class="order-info">
+            <div class="user-info">
+              <div>{{ order.username }}</div>
+              <div class="email">{{ order.email }}</div>
+            </div>
+            <div class="order-items">
+              <div v-for="item in order.items" :key="item.menu_item_id" class="order-item">
+                <span class="item-name">{{ item.name }}</span>
+                <div class="item-details">
+                  <span>数量: {{ item.quantity }}</span>
+                  <span>单价: ¥{{ item.price }}</span>
+                  <span>小计: ¥{{ item.quantity * item.price }}</span>
                 </div>
               </div>
-            </td>
-            <td class="price">¥{{ order.total_price }}</td>
-            <td>
+            </div>
+            <div class="price">总价: ¥{{ order.total_price }}</div>
+            <div class="status">
               <span :class="['status-tag', 'status-' + order.status]">
                 {{ statusText[order.status] }}
               </span>
-            </td>
-            <td>
-              <div class="time-info">
-                <div>{{ formatDate(order.created_at).date }}</div>
-                <div class="time">{{ formatDate(order.created_at).time }}</div>
-              </div>
-            </td>
-            <td class="order-actions">
+            </div>
+            <div class="time-info">
+              <div>{{ formatDate(order.created_at).date }}</div>
+              <div class="time">{{ formatDate(order.created_at).time }}</div>
+            </div>
+            <div class="order-actions">
               <button 
                 v-if="parseInt(order.status) === 0" 
                 class="btn-confirm"
                 @click="handleButtonClick(order)"
               >开始处理</button>
-
               <button 
                 v-if="parseInt(order.status) === 1" 
                 class="btn-complete"
                 @click="handleButtonClick(order)"
               >完成订单</button>
-
               <button 
                 v-if="parseInt(order.status) === 2" 
                 class="btn-delete"
                 @click="handleDeleteOrder(order)"
               >删除订单</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
     <div v-if="orders.length === 0 && !loading">
       <p class="empty-message">没有找到订单。</p>
     </div>
@@ -86,6 +67,8 @@
     </div>
   </div>
 </template>
+
+
 
 <script>
 import axios from 'axios';
@@ -252,88 +235,106 @@ export default {
 
 <style scoped>
 .order-management {
-  padding: 20px;
+  padding: 16px;
 }
 
 h2 {
   color: #303133;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  font-size: 24px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  background-color: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
-}
-
-th, td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #EBEEF5;
-}
-
-th {
-  background-color: #F5F7FA;
-  color: #606266;
-  font-weight: 500;
-}
-
-tr:hover {
-  background-color: #F5F7FA;
-}
-
-button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin: 0 5px;
-}
-
-button:hover {
-  opacity: 0.8;
-}
-
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+.order-cards {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  flex-wrap: wrap; /* 允许换行 */
+  gap: 16px;
+  justify-content: flex-start; /* 所有订单对齐到左边 */
 }
 
-.dialog {
+.order-card {
   background-color: white;
-  padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
-  text-align: center;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  width: 300px; /* 固定宽度 */
+  box-sizing: border-box;
+  flex-grow: 1; /* 允许订单卡片在没有足够空间时扩展 */
 }
 
-.dialog p {
-  margin-bottom: 15px;
+.order-info {
+  margin-top: 16px;
+}
+
+.order-items {
+  padding: 8px 0;
+}
+
+.order-item {
+  background-color: #f8f9fa;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column; /* 垂直排列 */
+  gap: 4px; /* 为每个信息项提供间距 */
+}
+
+.item-name {
+  font-weight: bold;
+  color: #303133;
+}
+
+.item-details {
+  font-size: 14px;
   color: #606266;
 }
 
-.dialog button {
-  background-color: #409EFF;
-  color: white;
-  padding: 8px 20px;
+.item-quantity,
+.item-price,
+.item-total {
+  margin-bottom: 4px; /* 让数量、单价和小计之间有间距 */
+}
+
+.price {
+  font-weight: bold;
+  margin-top: 12px;
+}
+
+.status-tag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.time-info {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+
+.time {
+  font-size: 14px;
+  color: #909399;
 }
 
 .order-actions {
+  margin-top: 12px;
   display: flex;
   gap: 8px;
+  flex-direction: column;
+}
+
+button {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.3s;
+  margin: 4px 0;
+  font-size: 14px;
+  width: 100%;
 }
 
 .btn-confirm {
@@ -357,102 +358,83 @@ button:hover {
   margin-top: 40px;
 }
 
-.user-info {
-  display: flex;
-  flex-direction: column;
+/* Mobile Optimization */
+@media screen and (max-width: 768px) {
+  table {
+    display: none; /* 隐藏桌面端表格 */
+  }
+
+  .order-cards {
+    flex-direction: column; /* 垂直排列 */
+    align-items: flex-start; /* 所有订单左对齐 */
+    gap: 16px; /* 提供一定的间距 */
+  }
+
+  .order-card {
+    width: 100%; /* 在小屏幕上每个订单卡片宽度占满父容器 */
+    flex-grow: 0; /* 不扩展 */
+    margin-bottom: 16px;
+  }
+
+  .order-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px; /* 用户信息之间有间距 */
+  }
+
+  .email {
+    font-size: 14px;
+    color: #909399;
+  }
+
+  .item-info {
+    gap: 6px;
+  }
+
+  .item-name {
+    font-size: 16px;
+    color: #303133;
+  }
+
+  .item-details {
+    font-size: 12px;
+    color: #606266;
+  }
+
+  .item-quantity,
+  .item-price,
+  .item-total {
+    font-size: 13px;
+  }
+
+  .btn-confirm,
+  .btn-complete,
+  .btn-delete {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .empty-message {
+    font-size: 14px;
+  }
 }
 
-.email {
-  font-size: 14px;
-  color: #909399;
+/* Large screen optimization (above 768px) */
+@media screen and (min-width: 769px) {
+  .order-cards {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .order-card {
+    width: 300px; /* 固定宽度 */
+    flex-grow: 1; /* 自动填充空间 */
+  }
 }
 
-.order-items {
-  max-width: 300px;
-  padding: 8px;
-}
-
-.order-item {
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-
-.order-item:last-child {
-  margin-bottom: 0;
-}
-
-.item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.item-name {
-  font-weight: bold;
-  color: #303133;
-}
-
-.item-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
-  color: #606266;
-}
-
-.item-quantity, .item-price, .item-total {
-  margin-right: 12px;
-}
-
-.item-total {
-  color: #409EFF;
-  font-weight: 500;
-}
-
-.price {
-  font-weight: bold;
-}
-
-.status-tag {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.status-0 {
-  background-color: #F56C6C;
-  color: white;
-}
-
-.status-1 {
-  background-color: #67C23A;
-  color: white;
-}
-
-.status-2 {
-  background-color: #409EFF;
-  color: white;
-}
-
-.status-3 {
-  background-color: #909399;
-  color: white;
-}
-
-.time-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.time {
-  font-size: 14px;
-  color: #909399;
-}
-
-.loading {
-  text-align: center;
-  margin-top: 40px;
-}
 </style>

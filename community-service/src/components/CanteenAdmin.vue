@@ -3,44 +3,50 @@
     <h2>食堂管理</h2>
 
     <!-- 添加/编辑菜品的表单 -->
-    <div>
+    <div class="form-container">
       <h3>{{ isEditing ? '编辑菜品' : '添加新菜品' }}</h3>
-      <form @submit.prevent="isEditing ? updateMenuItem() : addMenuItem()">
-        <div>
-          <label>菜品名称</label>
-          <input type="text" v-model="newItem.name" required />
+      <form @submit.prevent="isEditing ? updateMenuItem() : addMenuItem()" class="form">
+        <div class="form-group">
+          <label for="name">菜品名称</label>
+          <input id="name" type="text" v-model="newItem.name" required placeholder="输入菜品名称" />
         </div>
-        <div>
-          <label>价格</label>
-          <input type="number" v-model="newItem.price" required />
+        <div class="form-group">
+          <label for="price">价格</label>
+          <input id="price" type="number" v-model="newItem.price" required placeholder="输入菜品价格" />
         </div>
-        <div>
-          <label>图片链接</label>
-          <input type="text" v-model="newItem.image_url" />
+        <div class="form-group">
+          <label for="image-url">图片链接</label>
+          <input id="image-url" type="text" v-model="newItem.image_url" placeholder="输入图片URL" />
         </div>
-        <div>
+        <div class="form-group">
           <label>或上传图片</label>
           <input type="file" @change="handleFileUpload" ref="fileInput" />
         </div>
-        <div>
-          <label>描述</label>
-          <textarea v-model="newItem.description"></textarea>
+        <div class="form-group">
+          <label for="description">描述</label>
+          <textarea id="description" v-model="newItem.description" placeholder="输入菜品描述"></textarea>
         </div>
-        <button type="submit">{{ isEditing ? '更新菜品' : '添加菜品' }}</button>
-        <button type="button" @click="cancelEdit" v-if="isEditing">取消</button>
+        <div class="form-actions">
+          <button type="submit" class="submit-btn">{{ isEditing ? '更新菜品' : '添加菜品' }}</button>
+          <button type="button" @click="cancelEdit" v-if="isEditing" class="cancel-btn">取消</button>
+        </div>
       </form>
     </div>
 
     <!-- 菜品列表 -->
     <h3>菜品列表</h3>
-    <div v-if="menuItems.length > 0">
+    <div v-if="menuItems.length > 0" class="menu-list">
       <div v-for="item in menuItems" :key="item.id" class="menu-item">
         <img :src="getImageUrl(item.image_url)" alt="菜品图片" />
-        <h3>{{ item.name }}</h3>
-        <p>价格: {{ item.price }} 元</p>
-        <p>描述: {{ item.description }}</p>
-        <button @click="deleteMenuItem(item.id)">删除</button>
-        <button @click="editMenuItem(item)">编辑</button>
+        <div class="menu-item-info">
+          <h4>{{ item.name }}</h4>
+          <p class="price">价格: {{ item.price }} 元</p>
+          <p class="description">{{ item.description }}</p>
+        </div>
+        <div class="menu-item-actions">
+          <button @click="deleteMenuItem(item.id)" class="delete-btn">删除</button>
+          <button @click="editMenuItem(item)" class="edit-btn">编辑</button>
+        </div>
       </div>
     </div>
     <div v-else>
@@ -174,10 +180,8 @@ export default {
     },
     getImageUrl(path) {
       if (path.startsWith('http')) {
-        // 如果已经是完整URL直接返回
         return path;
       }
-      // 拼接完整URL
       return `${BASE_URL}${path}`;
     }
   }
@@ -186,30 +190,137 @@ export default {
 
 <style scoped>
 .canteen-admin {
-  padding: 20px;
+  padding: 30px;
+  font-family: Arial, sans-serif;
 }
 
-.menu-item {
-  border: 1px solid #ccc;
-  padding: 10px;
+.form-container {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
 }
 
-img {
-  max-width: 100px;
-  margin-right: 20px;
+.form h3 {
+  font-size: 1.5em;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 1em;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
 button {
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.submit-btn {
   background-color: #4CAF50;
   color: white;
-  border: none;
-  padding: 10px;
-  cursor: pointer;
+}
+
+.submit-btn:hover {
+  background-color: #45a049;
+}
+
+.cancel-btn {
+  background-color: #f44336;
+  color: white;
+  margin-left: 10px;
+}
+
+.cancel-btn:hover {
+  background-color: #e53935;
+}
+
+.menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.menu-item {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  padding: 15px;
+  transition: transform 0.3s ease;
+}
+
+.menu-item:hover {
+  transform: translateY(-5px);
+}
+
+.menu-item img {
+  width: 100%;
+  height: auto;
   border-radius: 5px;
 }
 
-button:hover {
-  background-color: #45a049;
+.menu-item-info {
+  padding: 10px 0;
+}
+
+.menu-item-info h4 {
+  font-size: 1.2em;
+  margin: 0;
+}
+
+.menu-item-info .price {
+  color: #4CAF50;
+}
+
+.menu-item-actions {
+  margin-top: 10px;
+}
+
+.menu-item-actions button {
+  margin-right: 10px;
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+.edit-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #1976D2;
+}
+
+.delete-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #e53935;
 }
 </style>
