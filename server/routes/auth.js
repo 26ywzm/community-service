@@ -770,6 +770,14 @@ router.put('/articles/:id', authenticateToken, upload.single('image'), async (re
   const { title, content, category, image_url } = req.body;
 
   try {
+    console.log('当前用户信息:', req.user);
+    // 检查用户权限
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      console.log('权限检查失败 - 用户角色:', req.user.role);
+      return res.status(403).json({ message: '权限不足，只有管理员可以修改文章' });
+    }
+    console.log('权限检查通过');
+
     // 检查文章是否存在
     const [existingArticle] = await pool.query('SELECT * FROM articles WHERE id = ?', [articleId]);
     if (existingArticle.length === 0) {
@@ -790,11 +798,13 @@ router.put('/articles/:id', authenticateToken, upload.single('image'), async (re
       // 删除旧图片
       if (existingArticle[0].image_url) {
         const oldImagePath = path.join(__dirname, '../uploads', path.basename(existingArticle[0].image_url));
-        fs.unlink(oldImagePath, (err) => {
-          if (err) {
-            console.error('删除旧图片失败:', err);
-          }
-        });
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlink(oldImagePath, (err) => {
+            if (err) {
+              console.error('删除旧图片失败:', err);
+            }
+          });
+        }
       }
     } else if (image_url) {
       // 如果提供了新的图片URL但没有上传文件
@@ -837,9 +847,14 @@ router.put('/articles/:id', authenticateToken, upload.single('image'), async (re
 });
 
 // 删除文章
-router.delete('/articles/:id', async (req, res) => {
+router.delete('/articles/:id', authenticateToken, async (req, res) => {
   const articleId = req.params.id;
   try {
+    // 检查用户权限
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({ message: '权限不足，只有管理员可以删除文章' });
+    }
+
     // 首先查找文章以获取图片路径
     const [rows] = await pool.query('SELECT image_url FROM articles WHERE id = ?', [articleId]);
     if (rows.length === 0) {
@@ -850,13 +865,15 @@ router.delete('/articles/:id', async (req, res) => {
     const imageUrl = rows[0].image_url;
     if (imageUrl) {
       const imagePath = path.join(__dirname, '../uploads', path.basename(imageUrl)); // 确保路径正确
-      fs.unlink(imagePath, (err) => {
-        if (err) {
-          console.error('删除图片失败:', err);
-        } else {
-          console.log('图片删除成功');
-        }
-      });
+      if (fs.existsSync(imagePath)) {
+        fs.unlink(imagePath, (err) => {
+          if (err) {
+            console.error('删除图片失败:', err);
+          } else {
+            console.log('图片删除成功');
+          }
+        });
+      }
     }
 
     // 删除文章
@@ -928,11 +945,13 @@ router.put('/canteen/menu/:id', authenticateToken, upload.single('image'), async
       // 删除旧图片
       if (existingItem[0].image_url) {
         const oldImagePath = path.join(__dirname, '../uploads', path.basename(existingItem[0].image_url));
-        fs.unlink(oldImagePath, (err) => {
-          if (err) {
-            console.error('删除旧图片失败:', err);
-          }
-        });
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlink(oldImagePath, (err) => {
+            if (err) {
+              console.error('删除旧图片失败:', err);
+            }
+          });
+        }
       }
     } else if (image_url) {
       // 如果提供了新的图片URL但没有上传文件
@@ -995,11 +1014,13 @@ router.delete('/canteen/menu/:id', authenticateToken, async (req, res) => {
     // 删除菜品图片
     if (existingItem[0].image_url) {
       const imagePath = path.join(__dirname, '../uploads', path.basename(existingItem[0].image_url));
-      fs.unlink(imagePath, (err) => {
-        if (err) {
-          console.error('删除图片失败:', err);
-        }
-      });
+      if (fs.existsSync(imagePath)) {
+        fs.unlink(imagePath, (err) => {
+          if (err) {
+            console.error('删除图片失败:', err);
+          }
+        });
+      }
     }
 
     // 删除菜品记录

@@ -41,20 +41,21 @@
 
       <!-- 列表展示 -->
       <div v-for="article in articles" :key="article.id" class="article">
-      <h3>{{ article.title }}</h3>
-      <p>{{ article.content }}</p>
-      <div class="action-buttons">
-        <button class="edit" @click="editArticle(article)">修改</button>
-        <button @click="deleteArticle(article.id)">删除</button>
+        <h3>{{ article.title }}</h3>
+        <img v-if="article.image_url" :src="article.blobUrl || ''" @error="loadImage(article)" :alt="article.title" class="article-image">
+        <p>{{ article.content }}</p>
+        <div class="action-buttons">
+          <button class="edit" @click="editArticle(article)">修改</button>
+          <button @click="deleteArticle(article.id)">删除</button>
+        </div>
       </div>
-    </div>
     </div>
   </div>
 </template>
 
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   data() {
@@ -65,17 +66,23 @@ export default {
       category: 'newsList',
       imageFile: null,
       editingArticleId: null,
-      articles: []
+      articles: [],
+      imageCache: new Map(), // 添加图片缓存
     };
   },
   methods: {
     async fetchArticles(category) {
       try {
-        const response = await axios.get(`${API}/articles?category=${category}`);
-        this.articles = response.data; // 更新文章列表
-        console.log(`获取 ${category} 文章成功`, this.articles);
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const response = await axios.get(`${API}/articles${category ? `?category=${category}` : ''}`, { headers });
+        this.articles = response.data;
+        // 预加载所有图片
+        for (const article of this.articles) {
+          await this.loadImage(article);
+        }
       } catch (error) {
-        console.error(`获取 ${category} 文章失败:`, error);
+        console.error('获取文章失败:', error);
       }
     },
     async loadArticles(category) {
@@ -96,17 +103,19 @@ export default {
       }
 
       try {
+        const token = localStorage.getItem('authToken');
+        const headers = {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        };
+
         if (this.editingArticleId) {
           // 编辑模式
-          await axios.put(`${API}/articles/${this.editingArticleId}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          await axios.put(`${API}/articles/${this.editingArticleId}`, formData, { headers });
           alert('文章修改成功');
         } else {
           // 新建模式
-          await axios.post(`${API}/articles`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+          await axios.post(`${API}/articles`, formData, { headers });
           alert('文章发布成功');
         }
         this.resetForm();
@@ -124,13 +133,16 @@ export default {
       this.editingArticleId = article.id;
     },
     async deleteArticle(articleId) {
-      try {
-        await axios.delete(`${API}/articles/${articleId}`);
-        alert('文章删除成功');
-        this.fetchArticles();
-      } catch (error) {
-        console.error('删除文章失败:', error);
-        alert('删除失败，请重试。');
+      if (confirm('确定要删除这篇文章吗？')) {
+        try {
+          const token = localStorage.getItem('authToken');
+          const headers = { 'Authorization': `Bearer ${token}` };
+          await axios.delete(`${API}/articles/${articleId}`, { headers });
+          this.fetchArticles(); // 重新加载文章列表
+        } catch (error) {
+          console.error('删除文章失败:', error);
+          alert('删除失败，请重试。');
+        }
       }
     },
     resetForm() {
@@ -144,7 +156,40 @@ export default {
     },
     cancelEdit() {
       this.resetForm();
-    }
+    },
+    async getImageUrl(path) {
+      if (!path) return ''; 
+      if (path.startsWith('http')) {
+        return path;
+      }
+      
+      // 检查缓存
+      if (this.imageCache.has(path)) {
+        return this.imageCache.get(path);
+      }
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const uploadPath = path.startsWith('/uploads/') ? path : `/uploads/${path}`;
+        const baseUrl = process.env.VUE_APP_BASE_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}${uploadPath}`, { headers });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // 存入缓存
+        this.imageCache.set(path, blobUrl);
+        
+        return blobUrl;
+      } catch (error) {
+        console.error('加载图片失败:', error);
+        return '';
+      }
+    },
+    async loadImage(article) {
+      if (!article.image_url) return;
+      article.blobUrl = await this.getImageUrl(article.image_url);
+    },
   },
   mounted() {
     this.fetchArticles();
@@ -153,6 +198,11 @@ export default {
 </script>
 
 <style scoped>
+.article-image {
+  max-width: 100%;
+  height: auto;
+  margin: 10px 0;
+}
 .article-editor {
   padding: 20px;
   max-width: 600px;
@@ -307,4 +357,3 @@ button:not(:disabled):hover {
   }
 }
 </style>
-

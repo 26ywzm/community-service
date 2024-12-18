@@ -37,7 +37,7 @@
     <h3>菜品列表</h3>
     <div v-if="menuItems.length > 0" class="menu-list">
       <div v-for="item in menuItems" :key="item.id" class="menu-item">
-        <img :src="getImageUrl(item.image_url)" alt="菜品图片" />
+        <img v-if="item.image_url" :src="item.blobUrl || ''" @error="loadImage(item)" alt="菜品图片" />
         <div class="menu-item-info">
           <h4>{{ item.name }}</h4>
           <p class="price">价格: {{ item.price }} 元</p>
@@ -58,15 +58,16 @@
 <script>
 import axios from 'axios';
 import { handleApiError } from '../utils/errorHandler';
-const BASE_URL = process.env.VUE_APP_BASE_URL;
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   data() {
     return {
       menuItems: [],
       newItem: { name: '', price: '', image_url: '', description: '' },
-      imageFile: null, // 增加一个字段存储文件
-      isEditing: false, // 编辑状态
+      imageFile: null,
+      isEditing: false,
+      imageCache: new Map(), // 添加图片缓存
     };
   },
   mounted() {
@@ -78,12 +79,16 @@ export default {
     },
     async fetchMenuItems() {
       try {
-        const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`, {
+        const response = await axios.get(`${API}/canteen/menu`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
         });
         this.menuItems = response.data; // 获取菜品数据
+        // 预加载所有图片
+        for (const item of this.menuItems) {
+          await this.loadImage(item);
+        }
       } catch (error) {
         handleApiError(error);
       }
@@ -99,7 +104,7 @@ export default {
       }
 
       try {
-        await axios.post(`${BASE_URL}/api/auth/canteen/menu`, formData, {
+        await axios.post(`${API}/canteen/menu`, formData, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'multipart/form-data'
@@ -118,7 +123,7 @@ export default {
     },
     async deleteMenuItem(itemId) {
       try {
-        await axios.delete(`${BASE_URL}/api/auth/canteen/menu/${itemId}`, {
+        await axios.delete(`${API}/canteen/menu/${itemId}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
@@ -149,7 +154,7 @@ export default {
 
       try {
         await axios.put(
-          `${BASE_URL}/api/auth/canteen/menu/${this.newItem.id}`, 
+          `${API}/canteen/menu/${this.newItem.id}`, 
           formData,
           {
             headers: {
@@ -178,11 +183,38 @@ export default {
       this.imageFile = null; // 重置文件字段
       this.$refs.fileInput.value = ''; // 清空文件输入
     },
-    getImageUrl(path) {
+    async loadImage(item) {
+      if (!item.image_url) return;
+      item.blobUrl = await this.getImageUrl(item.image_url);
+    },
+    async getImageUrl(path) {
+      if (!path) return ''; 
       if (path.startsWith('http')) {
         return path;
       }
-      return `${BASE_URL}${path}`;
+      
+      // 检查缓存
+      if (this.imageCache.has(path)) {
+        return this.imageCache.get(path);
+      }
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const uploadPath = path.startsWith('/uploads/') ? path : `/uploads/${path}`;
+        const baseUrl = process.env.VUE_APP_BASE_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}${uploadPath}`, { headers });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // 存入缓存
+        this.imageCache.set(path, blobUrl);
+        
+        return blobUrl;
+      } catch (error) {
+        console.error('加载图片失败:', error);
+        return '';
+      }
     }
   }
 };

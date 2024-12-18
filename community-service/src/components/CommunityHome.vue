@@ -4,7 +4,7 @@
     <div class="carousel" @mouseenter="pauseCarousel" @mouseleave="startCarousel">
       <router-link v-if="carouselImages.length > 0"
         :to="{ name: 'NewsDetail', params: { id: carouselImages[currentImage].id } }">
-        <img :src="getImageUrl(carouselImages[currentImage].image_url)" alt="轮播图" class="carousel-image" />
+        <img :src="carouselImages[currentImage].blobUrl" alt="轮播图" class="carousel-image" />
       </router-link>
       <button @click="prevImage">‹</button>
       <button @click="nextImage">›</button>
@@ -16,7 +16,7 @@
       <div class="hot-news-grid">
         <div v-for="news in hotNews" :key="news.id" class="news-item">
           <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">
-            <img :src="getImageUrl(news.image_url)" alt="新闻图片" class="news-image" />
+            <img :src="news.blobUrl" alt="新闻图片" class="news-image" />
           </router-link>
           <p>{{ news.title }}</p>
         </div>
@@ -36,10 +36,9 @@
 </template>
 
 <script>
-const API = process.env.VUE_APP_API_URL;
 import axios from 'axios';
+const API = process.env.VUE_APP_API_URL;
 import communityHome from '@/assets/community-home.js';
-const BASE_URL = process.env.VUE_APP_BASE_URL;
 export default {
   ...communityHome,
   data() {
@@ -50,16 +49,15 @@ export default {
       newsList: [],       // 新闻列表数据
       currentImage: 0,    // 当前显示的轮播图索引
       intervalId: null,   // 用于存储定时器 ID
+      imageCache: new Map(), // 添加图片缓存
     };
   },
   mounted() {
     this.checkDevice();
     window.addEventListener('scroll', this.handleScroll);
     window.addEventListener('resize', this.checkDevice);
-    this.fetchCarouselImages(); // 获取轮播图数据
-    this.fetchHotNews();        // 获取热门新闻数据
-    this.fetchNewsList();       // 获取新闻列表数据
-    this.startCarousel();       // 启动轮播图定时器
+    this.fetchData();
+    this.startCarousel();
   },
   beforeUnmount() {
     clearInterval(this.intervalId); // 组件销毁时清除定时器
@@ -67,33 +65,60 @@ export default {
   methods: {
     ...communityHome.methods,
 
-    async fetchCarouselImages() {
+    async loadImage(item) {
+      if (!item.image_url) return;
+      item.blobUrl = await this.getImageUrl(item.image_url);
+    },
+    async getImageUrl(path) {
+      if (!path) return ''; 
+      if (path.startsWith('http')) {
+        return path;
+      }
+      
+      // 检查缓存
+      if (this.imageCache.has(path)) {
+        return this.imageCache.get(path);
+      }
+
       try {
-        const response = await axios.get(`${API}/articles?category=carousel`);
-        this.carouselImages = response.data.map(article => ({
-          id: article.id,
-          image_url: article.image_url,
-        }));
+        const uploadPath = path.startsWith('/uploads/') ? path : `/uploads/${path}`;
+        const baseUrl = API.replace('/api/auth', '');
+        const response = await fetch(`${baseUrl}${uploadPath}`);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // 存入缓存
+        this.imageCache.set(path, blobUrl);
+        
+        return blobUrl;
       } catch (error) {
-        console.error('获取轮播图失败:', error);
+        console.error('加载图片失败:', error);
+        return '';
       }
     },
-
-    async fetchHotNews() {
+    async fetchData() {
       try {
-        const response = await axios.get(`${API}/articles?category=hotNews`);
-        this.hotNews = response.data;
-      } catch (error) {
-        console.error('获取热门新闻失败:', error);
-      }
-    },
+        // 获取轮播图数据
+        const carouselResponse = await axios.get(`${API}/articles?category=carousel`);
+        this.carouselImages = carouselResponse.data;
+        // 预加载轮播图
+        for (const image of this.carouselImages) {
+          await this.loadImage(image);
+        }
 
-    async fetchNewsList() {
-      try {
-        const response = await axios.get(`${API}/articles?category=newsList`);
-        this.newsList = response.data;
+        // 获取热门新闻数据
+        const hotNewsResponse = await axios.get(`${API}/articles?category=hotNews`);
+        this.hotNews = hotNewsResponse.data;
+        // 预加载热门新闻图片
+        for (const news of this.hotNews) {
+          await this.loadImage(news);
+        }
+
+        // 获取新闻列表数据
+        const newsListResponse = await axios.get(`${API}/articles?category=newsList`);
+        this.newsList = newsListResponse.data;
       } catch (error) {
-        console.error('获取新闻列表失败:', error);
+        console.error('获取数据失败:', error);
       }
     },
 
@@ -105,13 +130,6 @@ export default {
 
     pauseCarousel() {
       clearInterval(this.intervalId); 
-    },
-
-    getImageUrl(path) {
-      if (path.startsWith('http')) {
-        return path;
-      }
-      return `${BASE_URL}${path}`;
     },
 
     nextImage() {
