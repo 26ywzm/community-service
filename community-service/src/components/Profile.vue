@@ -249,14 +249,21 @@ export default {
       this.$router.push('/register');
     },
     async logout() {
+      // 清除所有本地存储
       localStorage.removeItem('authToken');
-      this.isLoggedIn = false;
-      this.userInfo = {
-        username: '',
-        email: '',
-        role: '',
-        balance: 0
-      };
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('username');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('email');
+      
+      // 可选：完全清除所有本地存储
+      // localStorage.clear();
+      
+      // 重定向到登录页
+      await this.$router.push('/login');
+      
+      // 提示用户
+      alert('已成功退出登录');
     },
     cancelEdit() {
       this.editMode = false;

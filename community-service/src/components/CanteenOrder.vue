@@ -5,17 +5,20 @@
     <!-- 菜品列表 -->
     <div v-if="menuItems.length > 0" class="menu-list">
       <div v-for="item in menuItems" :key="item.id" class="menu-item">
-        <img :src="getImageUrl(item.image_url)" alt="菜品图片" />
+        <img v-if="item.image_url" 
+             :src="item.blobUrl || ''" 
+             @error="loadImage(item)" 
+             alt="菜品图片" />
         <div class="menu-item-info">
           <h3>{{ item.name }}</h3>
           <p class="description">{{ item.description }}</p>
-          <p class="price">价格: {{ item.price }} 元</p>
-
-          <!-- 订餐数量输入框 -->
-          <div class="quantity-selector">
-            <input type="number" v-model.number="item.quantity" min="1" placeholder="订购数量" />
-            <button @click="addToCart(item)" class="add-to-cart-btn">加入购物车</button>
+          <p class="price">¥{{ item.price }}</p>
+          <div class="quantity-controls">
+            <button @click="decrementQuantity(item)">-</button>
+            <span>{{ item.quantity }}</span>
+            <button @click="incrementQuantity(item)">+</button>
           </div>
+          <button @click="addToCart(item)" class="add-to-cart">加入购物车</button>
         </div>
       </div>
     </div>
@@ -52,20 +55,30 @@ export default {
   data() {
     return {
       menuItems: [], // 菜单数据
-      cart: [] // 购物车数据
+      cart: [], // 购物车数据
+      imageCache: new Map(), // 添加图片缓存
     };
   },
-  mounted() {
-    this.fetchMenuItems(); // 加载可用的菜单项
+  async mounted() {
+    await this.fetchMenuItems(); // 加载可用的菜单项
   },
   methods: {
     async fetchMenuItems() {
       try {
         const response = await axios.get(`${BASE_URL}/api/auth/canteen/menu`);
         this.menuItems = response.data.map(item => ({ ...item, quantity: 1 })); // 添加 quantity 字段并设置默认值为1
+        // 预加载所有图片
+        for (const item of this.menuItems) {
+          await this.loadImage(item);
+        }
       } catch (error) {
         console.error('获取菜单失败:', error);
       }
+    },
+
+    async loadImage(item) {
+      if (!item.image_url) return;
+      item.blobUrl = await this.getImageUrl(item.image_url);
     },
 
     addToCart(item) {
@@ -117,11 +130,42 @@ export default {
       }
     },
 
-    getImageUrl(path) {
+    async getImageUrl(path) {
+      if (!path) return ''; 
       if (path.startsWith('http')) {
         return path;
       }
-      return `${BASE_URL}${path}`;
+      
+      // 检查缓存
+      if (this.imageCache.has(path)) {
+        return this.imageCache.get(path);
+      }
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const uploadPath = path.startsWith('/uploads/') ? path : `/uploads/${path}`;
+        const baseUrl = process.env.VUE_APP_BASE_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}${uploadPath}`, { headers });
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // 存入缓存
+        this.imageCache.set(path, blobUrl);
+        
+        return blobUrl;
+      } catch (error) {
+        console.error('加载图片失败:', error);
+        return '';
+      }
+    },
+    decrementQuantity(item) {
+      if (item.quantity > 1) {
+        item.quantity--;
+      }
+    },
+    incrementQuantity(item) {
+      item.quantity++;
     }
   }
 };
@@ -185,22 +229,28 @@ h2 {
   font-weight: bold;
 }
 
-.quantity-selector {
+.quantity-controls {
   display: flex;
   align-items: center;
   margin-top: 10px;
 }
 
-.quantity-selector input {
-  width: 50px;
-  padding: 5px;
-  margin-right: 10px;
+.quantity-controls button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0 5px;
   font-size: 1rem;
   border-radius: 5px;
   border: 1px solid #ccc;
 }
 
-.add-to-cart-btn {
+.quantity-controls span {
+  font-size: 1rem;
+  margin: 0 5px;
+}
+
+.add-to-cart {
   background-color: #4CAF50;
   color: white;
   border: none;
@@ -209,7 +259,7 @@ h2 {
   border-radius: 5px;
 }
 
-.add-to-cart-btn:hover {
+.add-to-cart:hover {
   background-color: #45a049;
 }
 
