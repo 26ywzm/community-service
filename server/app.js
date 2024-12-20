@@ -14,12 +14,14 @@ const app = express();
 
 // 基础中间件
 app.use(helmet()); // 安全中间件
+
+// CORS 配置
 app.use(cors({
-    origin: 'https://sheqv.26ywzm.icu',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  })); // 跨域中间件
+  origin: ['https://sheqv.26ywzm.icu', 'https://api.26ywzm.icu'],
+  credentials: true
+}));
 app.options('*', cors());
+
 app.use(compression()); // 压缩中间件
 app.use(morgan('dev')); // 日志中间件
 app.use(express.json()); // JSON解析
