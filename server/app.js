@@ -34,11 +34,10 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true,
-  maxAge: 86400
+  maxAge: 86400,
+  preflightContinue: false, // 不继续处理预检请求
+  optionsSuccessStatus: 204
 }));
-
-// 处理 OPTIONS 请求
-app.options('*', cors());
 
 // 基础中间件
 app.use(express.json()); // JSON解析
