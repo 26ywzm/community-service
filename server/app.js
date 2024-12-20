@@ -12,14 +12,32 @@ dotenv.config();
 
 const app = express();
 
-// 基础中间件
-app.use(helmet()); // 安全中间件
+// Helmet 配置
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.26ywzm.icu", "https://sheqv.26ywzm.icu"],
+    },
+  },
+}));
 
 // CORS 配置
 app.use(cors({
   origin: ['https://sheqv.26ywzm.icu', 'https://api.26ywzm.icu'],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// 处理 OPTIONS 请求
 app.options('*', cors());
 
 app.use(compression()); // 压缩中间件

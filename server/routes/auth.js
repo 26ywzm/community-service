@@ -50,27 +50,6 @@ const loginLimiter = rateLimit({
   message: { message: '尝试次数过多，请15分钟后再试' }
 });
 
-// // 密码验证函数
-// const validatePassword = (password) => {
-//   const errors = [];
-//   if (password.length < 8) {
-//     errors.push('密码长度至少8个字符');
-//   }
-//   if (!/[A-Z]/.test(password)) {
-//     errors.push('密码必须包含至少一个大写字母');
-//   }
-//   if (!/[a-z]/.test(password)) {
-//     errors.push('密码必须包含至少一个小写字母');
-//   }
-//   if (!/[0-9]/.test(password)) {
-//     errors.push('密码必须包含至少一个数字');
-//   }
-//   return {
-//     isValid: errors.length === 0,
-//     errors: errors
-//   };
-// };
-
 // 邮箱验证函数
 const validateEmail = (email) => {
   const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
@@ -80,43 +59,40 @@ const validateEmail = (email) => {
 // 用户注册
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
+  
+  // 验证请求体是否包含所需字段
+  if (!username || !email || !password) {
+    return res.status(400).json({ 
+      success: false,
+      message: '请提供完整的注册信息'
+    });
+  }
+
+  // 验证邮箱格式
+  if (!validateEmail(email)) {
+    return res.status(400).json({ 
+      success: false,
+      message: '邮箱格式不正确'
+    });
+  }
+
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // 验证输入
-    if (!username || !email || !password) {
-      throw new Error('请提供完整的注册信息');
-    }
-
-    // 验证邮箱格式
-    if (!validateEmail(email)) {
-      throw new Error('邮箱格式不正确');
-    }
-
-    // 验证密码强度
-    // const passwordValidation = validatePassword(password);
-    // if (!passwordValidation.isValid) {
-    //   throw new Error('密码不符合要求: ' + passwordValidation.errors.join(', '));
-    // }
-
-    // 检查用户名是否已存在
-    const [existingUsername] = await connection.query(
-      'SELECT id FROM users WHERE username = ?',
-      [username]
-    );
-    if (existingUsername.length > 0) {
-      throw new Error('用户名已被使用');
-    }
-
-    // 检查邮箱是否已存在
-    const [existingEmail] = await connection.query(
+    // 检查邮箱是否已被注册
+    const [existingUsers] = await connection.query(
       'SELECT id FROM users WHERE email = ?',
       [email]
     );
-    if (existingEmail.length > 0) {
-      throw new Error('邮箱已被注册');
+
+    if (existingUsers.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({ 
+        success: false,
+        message: '该邮箱已被注册' 
+      });
     }
 
     // 加密密码
@@ -124,14 +100,13 @@ router.post('/register', async (req, res) => {
 
     // 插入新用户
     const [result] = await connection.query(
-      `INSERT INTO users (username, email, password, role) 
-       VALUES (?, ?, ?, 'user')`,
-      [username, email, hashedPassword]
+      'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+      [username, email, hashedPassword, 'user']
     );
 
     await connection.commit();
 
-    // 生成JWT令牌
+    // 生成 JWT token
     const token = jwt.sign(
       { 
         id: result.insertId,
@@ -144,6 +119,7 @@ router.post('/register', async (req, res) => {
     );
 
     res.status(201).json({
+      success: true,
       message: '注册成功',
       user: {
         id: result.insertId,
@@ -153,11 +129,13 @@ router.post('/register', async (req, res) => {
       },
       token
     });
-
   } catch (error) {
     await connection.rollback();
     console.error('用户注册失败:', error);
-    res.status(400).json({ message: error.message || '注册失败' });
+    res.status(500).json({ 
+      success: false,
+      message: error.message || '注册失败，请稍后重试'
+    });
   } finally {
     connection.release();
   }
@@ -309,12 +287,6 @@ router.put('/me', authenticateToken, async (req, res) => {
       const validPassword = await bcrypt.compare(currentPassword, user[0].password);
       if (!validPassword) {
         throw new Error('当前密码错误');
-      }
-
-      // 验证新密码强度
-      const passwordValidation = validatePassword(newPassword);
-      if (!passwordValidation.isValid) {
-        throw new Error('新密码不符合要求: ' + passwordValidation.errors.join(', '));
       }
 
       // 加密新密码
