@@ -13,7 +13,20 @@ dotenv.config();
 const app = express();
 
 // 日志中间件
-app.use(morgan('dev')); // 添加详细的请求日志
+morgan.token('body', (req) => JSON.stringify(req.body));
+app.use(morgan(':method :url :status :response-time ms - :res[content-length] :body'));
+
+// 请求调试中间件
+app.use((req, res, next) => {
+    console.log('收到请求:', {
+        时间: new Date().toISOString(),
+        方法: req.method,
+        URL: req.url,
+        头部: req.headers,
+        body: req.body
+    });
+    next();
+});
 
 // CORS 配置 - 必须在其他中间件之前
 app.use(cors({
