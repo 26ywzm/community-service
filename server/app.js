@@ -49,6 +49,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(compression());
 
+// 请求日志中间件
+app.use((req, res, next) => {
+    console.log('\n=== 收到新请求 ===');
+    console.log('时间:', new Date().toISOString());
+    console.log('方法:', req.method);
+    console.log('协议:', req.protocol);
+    console.log('主机:', req.hostname);
+    console.log('原始URL:', req.originalUrl);
+    console.log('路径:', req.path);
+    console.log('查询:', req.query);
+    console.log('头部:', req.headers);
+    console.log('==================\n');
+    next();
+});
+
 // Helmet 配置
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
