@@ -90,13 +90,36 @@ async function startServer() {
         
         // 启动服务器
         const PORT = process.env.PORT || 3000;
-        app.listen(PORT, () => {
-            console.log(`服务器运行在端口 ${PORT}`);
+        const server = app.listen(PORT, '0.0.0.0', () => {
+            const address = server.address();
+            console.log(`服务器启动成功！`);
+            console.log(`监听地址: ${address.address}`);
+            console.log(`监听端口: ${address.port}`);
+            console.log(`CORS origin: https://sheqv.26ywzm.icu`);
+        });
+
+        // 错误处理
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.error(`错误：端口 ${PORT} 已被占用！`);
+            } else {
+                console.error('服务器错误：', error);
+            }
+            process.exit(1);
         });
     } catch (error) {
         console.error('服务器启动失败:', error);
         process.exit(1);
     }
 }
+
+// 优雅退出
+process.on('SIGTERM', () => {
+    console.log('收到 SIGTERM 信号，准备关闭服务器...');
+    server.close(() => {
+        console.log('服务器已安全关闭');
+        process.exit(0);
+    });
+});
 
 startServer();
