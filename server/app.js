@@ -56,7 +56,24 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 路由
 const authRoutes = require('./routes/auth');
+
+// 路由日志中间件
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    if (req.body) {
+        console.log('Body:', JSON.stringify(req.body, null, 2));
+    }
+    next();
+});
+
+// 注意：API 路由前缀是 /api/auth
 app.use('/api/auth', authRoutes);
+
+// 测试路由
+app.get('/test', (req, res) => {
+    res.json({ message: 'Server is running' });
+});
 
 // 404 处理
 app.use((req, res, next) => {
