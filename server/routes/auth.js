@@ -58,10 +58,16 @@ const validateEmail = (email) => {
 
 // 用户注册
 router.post('/register', async (req, res) => {
+  console.log('收到注册请求:', {
+    headers: req.headers,
+    body: req.body
+  });
+
   const { username, email, password } = req.body;
   
   // 验证请求体是否包含所需字段
   if (!username || !email || !password) {
+    console.log('注册信息不完整');
     return res.status(400).json({ 
       success: false,
       message: '请提供完整的注册信息'
@@ -70,6 +76,7 @@ router.post('/register', async (req, res) => {
 
   // 验证邮箱格式
   if (!validateEmail(email)) {
+    console.log('邮箱格式不正确:', email);
     return res.status(400).json({ 
       success: false,
       message: '邮箱格式不正确'
@@ -77,17 +84,21 @@ router.post('/register', async (req, res) => {
   }
 
   const connection = await pool.getConnection();
+  console.log('数据库连接已建立');
 
   try {
     await connection.beginTransaction();
+    console.log('开始事务');
 
     // 检查邮箱是否已被注册
     const [existingUsers] = await connection.query(
       'SELECT id FROM users WHERE email = ?',
       [email]
     );
+    console.log('检查邮箱是否存在:', existingUsers);
 
     if (existingUsers.length > 0) {
+      console.log('邮箱已被注册:', email);
       await connection.rollback();
       return res.status(400).json({ 
         success: false,
@@ -97,14 +108,17 @@ router.post('/register', async (req, res) => {
 
     // 加密密码
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('密码已加密');
 
     // 插入新用户
     const [result] = await connection.query(
       'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
       [username, email, hashedPassword, 'user']
     );
+    console.log('用户已插入数据库:', result);
 
     await connection.commit();
+    console.log('事务已提交');
 
     // 生成 JWT token
     const token = jwt.sign(
@@ -117,6 +131,7 @@ router.post('/register', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+    console.log('JWT token 已生成');
 
     res.status(201).json({
       success: true,
@@ -129,15 +144,18 @@ router.post('/register', async (req, res) => {
       },
       token
     });
+    console.log('注册成功响应已发送');
   } catch (error) {
+    console.error('注册过程中发生错误:', error);
     await connection.rollback();
-    console.error('用户注册失败:', error);
+    console.log('事务已回滚');
     res.status(500).json({ 
       success: false,
       message: error.message || '注册失败，请稍后重试'
     });
   } finally {
     connection.release();
+    console.log('数据库连接已释放');
   }
 });
 
