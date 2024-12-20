@@ -66,13 +66,27 @@ app.get('/test', (req, res) => {
         message: 'Server is running',
         time: new Date().toISOString(),
         headers: req.headers,
-        url: req.url
+        url: req.url,
+        baseUrl: req.baseUrl,
+        originalUrl: req.originalUrl,
+        path: req.path
     });
 });
 
 // API 路由
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+
+// 根路由
+app.get('/', (req, res) => {
+    res.json({ 
+        message: 'API Server is running',
+        endpoints: {
+            test: '/test',
+            auth: '/api/auth/*'
+        }
+    });
+});
 
 // 路由日志中间件
 app.use((req, res, next) => {
