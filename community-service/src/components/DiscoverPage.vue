@@ -10,6 +10,9 @@
           <button class="action-button">社区食堂</button>
         </router-link>
         <button @click="fetchUserOrders" class="action-button">查看我的订单</button>
+        <router-link to="/feedback">
+          <button class="action-button">意见反馈</button>
+        </router-link>
       </div>
 
       <!-- 用户订单列表 -->
@@ -114,6 +117,9 @@
           </router-link>
           <router-link to="/canteen/orders">
             <button class="admin-button">订单管理</button>
+          </router-link>
+          <router-link to="/managefeedback">
+            <button class="admin-button">管理留言</button>
           </router-link>
         </div>
       </div>

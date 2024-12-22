@@ -95,6 +95,20 @@ async function initDatabase() {
             )
         `);
 
+        //创建留言或建议表
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                message TEXT,
+                admin_reply TEXT,
+                status ENUM('pending', 'processed') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, 
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        `);
+
         console.log('数据库表初始化成功！');
         connection.release();
     } catch (error) {

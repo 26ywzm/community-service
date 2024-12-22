@@ -12,149 +12,98 @@ dotenv.config();
 
 const app = express();
 
-// 详细的请求日志
-morgan.token('body', (req) => JSON.stringify(req.body));
-app.use(morgan(':method :url :status :response-time ms - :res[content-length] :body'));
-
-// 请求调试中间件
-app.use((req, res, next) => {
-    console.log('\n--- 收到新请求 ---');
-    console.log('时间:', new Date().toISOString());
-    console.log('方法:', req.method);
-    console.log('URL:', req.url);
-    console.log('原始URL:', req.originalUrl);
-    console.log('基础URL:', req.baseUrl);
-    console.log('路径:', req.path);
-    console.log('协议:', req.protocol);
-    console.log('主机:', req.hostname);
-    console.log('IP:', req.ip);
-    console.log('头部:', JSON.stringify(req.headers, null, 2));
-    console.log('查询参数:', req.query);
-    console.log('请求体:', req.body);
-    console.log('---------------\n');
-    next();
-});
-
-// CORS 配置
-app.use(cors({
-    origin: 'https://sheqv.26ywzm.icu',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    credentials: true,
-    maxAge: 86400
-}));
+// // 请求调试中间件
+// app.use((req, res, next) => {
+//     console.log('\n--- 收到新请求 ---');
+//     console.log('时间:', new Date().toISOString());
+//     console.log('方法:', req.method);
+//     console.log('URL:', req.url);
+//     console.log('原始URL:', req.originalUrl);
+//     console.log('基础URL:', req.baseUrl);
+//     console.log('路径:', req.path);
+//     console.log('协议:', req.protocol);
+//     console.log('主机:', req.hostname);
+//     console.log('IP:', req.ip);
+//     console.log('头部:', JSON.stringify(req.headers, null, 2));
+//     console.log('查询参数:', req.query);
+//     console.log('请求体:', req.body);
+//     console.log('---------------\n');
+//     next();
+// });
 
 // 基础中间件
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(compression());
-
-// 请求日志中间件
-app.use((req, res, next) => {
-    console.log('\n=== 收到新请求 ===');
-    console.log('时间:', new Date().toISOString());
-    console.log('方法:', req.method);
-    console.log('协议:', req.protocol);
-    console.log('主机:', req.hostname);
-    console.log('原始URL:', req.originalUrl);
-    console.log('路径:', req.path);
-    console.log('查询:', req.query);
-    console.log('头部:', req.headers);
-    console.log('==================\n');
-    next();
-});
-
 // Helmet 配置
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false
-}));
+})); // 安全中间件
+app.use(cors()); // 跨域中间件
+app.options('*', cors());
+app.use(compression()); // 压缩中间件
+app.use(morgan('dev')); // 日志中间件
+app.use(express.json()); // JSON解析
+app.use(express.urlencoded({ extended: true })); // URL编码解析
+
 
 // 静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// 测试路由
-app.get('/test', (req, res) => {
-    console.log('测试路由被访问');
-    res.json({ 
-        message: 'Server is running',
-        time: new Date().toISOString(),
-        headers: req.headers,
-        url: req.url,
-        baseUrl: req.baseUrl,
-        originalUrl: req.originalUrl,
-        path: req.path
-    });
-});
-
-// API 路由
+// 路由
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+const canteenRoutes = require('./routes/canteen');
+app.use('/api/canteen', canteenRoutes);
 
-// 根路由
-app.get('/', (req, res) => {
-    res.json({ 
-        message: 'API Server is running',
-        endpoints: {
-            test: '/test',
-            auth: '/api/auth/*'
-        }
-    });
-});
+// 请求日志中间件
+// app.use((req, res, next) => {
+//     console.log('\n=== 收到新请求 ===');
+//     console.log('时间:', new Date().toISOString());
+//     console.log('方法:', req.method);
+//     console.log('协议:', req.protocol);
+//     console.log('主机:', req.hostname);
+//     console.log('原始URL:', req.originalUrl);
+//     console.log('路径:', req.path);
+//     console.log('查询:', req.query);
+//     console.log('头部:', req.headers);
+//     console.log('==================\n');
+//     next();
+// });
 
-// 路由日志中间件
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    if (req.body) {
-        console.log('Body:', JSON.stringify(req.body, null, 2));
-    }
-    next();
-});
-
-// 404 处理
-app.use((req, res, next) => {
-    console.log('404 错误:', {
-        时间: new Date().toISOString(),
-        方法: req.method,
-        URL: req.url,
-        原始URL: req.originalUrl,
-        头部: req.headers
-    });
-    res.status(404).json({
-        success: false,
-        message: '404 Not Found - ' + req.url,
-        path: req.url,
-        method: req.method,
-        time: new Date().toISOString()
-    });
-});
-
-// 错误处理
+// 错误处理中间件
 app.use((err, req, res, next) => {
-    console.error('服务器错误:', {
-        错误: err,
-        堆栈: err.stack,
-        时间: new Date().toISOString(),
-        URL: req.url,
-        方法: req.method
-    });
-    res.status(500).json({
-        success: false,
-        message: '服务器错误',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
+    console.error(err.stack);
+    res.status(500).json({ message: '服务器错误' });
 });
+
+// 初始化数据库并启动服务器
+async function startServer() {
+    try {
+        // 测试数据库连接
+        await testConnection();
+        
+        // 初始化数据库表
+        await initDatabase();
+        
+        // 启动服务器
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`服务器运行在端口 ${PORT}`);
+        });
+    } catch (error) {
+        console.error('服务器启动失败:', error);
+        process.exit(1);
+    }
+}
 
 // 启动服务器
 async function startServer() {
     try {
         await testConnection();
-        console.log('数据库连接成功！');
+        // console.log('数据库连接成功！');
         
         await initDatabase();
-        console.log('数据库表初始化成功！');
+        // console.log('数据库表初始化成功！');
         
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, '0.0.0.0', () => {

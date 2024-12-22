@@ -233,6 +233,7 @@ h2 {
   display: flex;
   align-items: center;
   margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .quantity-controls button {

@@ -10,6 +10,8 @@ import CanteenOrder from '@/components/CanteenOrder.vue'; // 导入订餐组件
 import CanteenAdmin from '@/components/CanteenAdmin.vue';
 import OrderDetail from '@/components/OrderDetail.vue';
 import OrderManagement from '@/components/OrderManagement.vue';
+import SubmitFeedback from '@/components/SubmitFeedback.vue';
+import ManageFeedback from '@/components/ManageFeedback.vue';
 
 // 创建路由
 const routes = [
@@ -23,7 +25,9 @@ const routes = [
   { path: '/canteenorder', name: 'CanteenOrder', component: CanteenOrder },
   { path: '/canteenadmin', name: 'CanteenAdmin', component: CanteenAdmin },
   { path: '/order/:orderId',name: 'OrderDetail',component: OrderDetail,},
-  { path: '/canteen/orders', name: 'OrderManagement', component: OrderManagement }
+  { path: '/canteen/orders', name: 'OrderManagement', component: OrderManagement },
+  { path: '/feedback', name: 'SubmitFeedback', component: SubmitFeedback},
+  { path: '/managefeedback', name: 'ManageeFedback', component: ManageFeedback},
 ];
 
 // 创建 router 实例
