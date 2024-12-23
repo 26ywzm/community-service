@@ -1,126 +1,275 @@
 <template>
   <div class="chat-container">
+    <!-- 用户列表 -->
     <div class="user-list">
       <h3>用户列表</h3>
-      <ul>
-        <!-- 显示所有用户，管理员可以点击查看与他们的对话 -->
-        <li v-for="user in users" :key="user.id" @click="selectUser(user)"
+      <div v-if="loading" class="loading">
+        加载中...
+      </div>
+      <div v-else-if="users.length === 0" class="no-users">
+        暂无用户数据
+      </div>
+      <ul v-else>
+        <li v-for="user in users" 
+            :key="user.id" 
+            @click="selectUser(user)"
             :class="{ active: selectedUser && selectedUser.id === user.id }">
-          {{ user.username }}
+          <span class="username">{{ user.username || user.email || '未命名用户' }}</span>
+          <span class="message-count" v-if="user.messageCount">
+            {{ user.messageCount }}
+          </span>
         </li>
       </ul>
     </div>
 
+    <!-- 留言记录 -->
     <div class="chat-box">
-      <!-- 如果选定了用户，显示与该用户的对话，否则显示所有用户的聊天记录 -->
-      <h3>{{ selectedUser ? `与 ${selectedUser.username} 的对话` : '所有用户聊天记录' }}</h3>
-      <div class="messages">
-        <div v-for="message in chatMessages" :key="message.id" 
-             :class="['message', message.isAdmin ? 'admin' : 'user']"
-             @click="selectMessage(message)">
-          <div class="message-content">{{ message.message }}</div>
-          <div class="message-reply" v-if="message.admin_reply">
-            <strong>管理员回复：</strong> {{ message.admin_reply }}
-          </div>
-          <div class="timestamp">{{ formatTimestamp(message.created_at) }}</div>
-        </div>
+      <div v-if="!selectedUser" class="no-selection">
+        请选择一个用户查看留言记录
       </div>
-
-      <!-- 管理员回复区域 -->
-      <div class="reply-area">
-        <div v-if="selectedMessage" class="selected-message">
-          正在回复: {{ selectedMessage.message }}
-          <button @click="cancelReply" class="cancel-btn small">取消回复</button>
+      <template v-else>
+        <h3>与 {{ selectedUser.username || selectedUser.email || '未命名用户' }} 的留言记录</h3>
+        <div class="messages">
+          <div v-if="loading" class="loading">
+            加载中...
+          </div>
+          <div v-else-if="chatMessages.length === 0" class="no-messages">
+            暂无留言记录
+          </div>
+          <template v-else>
+            <div v-for="message in chatMessages" 
+                 :key="message.id" 
+                 :class="['message', message.isAdmin ? 'admin' : 'user']">
+              <div class="message-header">
+                <span class="username">{{ message.username }}</span>
+                <div class="message-actions">
+                  <button class="action-btn delete" @click="deleteMessage(message)">
+                    删除
+                  </button>
+                  <button v-if="!message.admin_reply" 
+                          class="action-btn reply" 
+                          @click="selectMessage(message)">
+                    回复
+                  </button>
+                </div>
+              </div>
+              <div class="message-content">{{ message.message }}</div>
+              <div class="message-reply" v-if="message.admin_reply">
+                <strong>管理员回复：</strong> {{ message.admin_reply }}
+              </div>
+              <div class="timestamp">{{ formatTimestamp(message.created_at) }}</div>
+            </div>
+          </template>
         </div>
-        <div class="input-area">
-          <textarea v-model="adminReply" 
-                    :placeholder="selectedMessage ? '输入回复...' : (selectedUser ? '发送新消息给该用户...' : '请先选择一个用户')" 
-                    rows="3"
-                    :disabled="!selectedUser && !selectedMessage"></textarea>
-          <div class="button-group">
+
+        <!-- 管理员回复区域 -->
+        <div class="reply-area">
+          <div v-if="selectedMessage" class="selected-message">
+            正在回复: {{ selectedMessage.message }}
+            <button @click="cancelReply" class="cancel-btn">取消回复</button>
+          </div>
+          <div class="input-area">
+            <textarea v-model="adminReply" 
+                      :placeholder="selectedMessage ? '输入回复...' : '发送新消息给该用户...'" 
+                      rows="3"></textarea>
             <button @click="sendMessage" 
-                    :disabled="isSending || !adminReply.trim() || (!selectedUser && !selectedMessage)">
-              {{ isSending ? '发送中...' : '发送' }}
+                    class="send-btn" 
+                    :disabled="loading || !adminReply.trim()">
+              {{ selectedMessage ? '发送回复' : '发送消息' }}
             </button>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 提示消息 -->
-    <div v-if="message.show" :class="['message-toast', message.type]">
-      {{ message.content }}
+      </template>
     </div>
   </div>
 </template>
 
+
 <script>
 import axios from 'axios';
-const BASE_URL = process.env.VUE_APP_BASE_URL;
+
+// 配置API基础URL
+const API_BASE = process.env.VUE_APP_BASE_URL;
 
 export default {
   data() {
     return {
-      users: [],  // 用户列表
-      selectedUser: null,  // 当前选择的用户
-      selectedMessage: null, // 当前选择要回复的消息
-      chatMessages: [],  // 当前用户的聊天记录
-      adminReply: '',  // 管理员输入的回复内容
-      message: {
-        show: false,
-        content: '',
-        type: 'success'
-      },
-      isSending: false  // 防止重复发送
+      users: [],           // 用户列表
+      selectedUser: null,  // 当前选中的用户
+      chatMessages: [],    // 当前用户的留言列表
+      selectedMessage: null, // 当前选中要回复的留言
+      adminReply: '',      // 管理员回复内容
+      loading: false,      // 加载状态
+      message: { show: false, content: '', type: '' }  // 消息提示
     };
   },
-
-  mounted() {
-    this.fetchUsers();  // 获取用户列表
-    this.fetchChatMessages(); // 获取所有聊天记录
-  },
-
   methods: {
-    // 显示提示消息
-    showMessage(content, type) {
-      this.message = {
-        content,
-        type,
-        show: true
-      };
-
-      setTimeout(() => {
-        this.message.show = false;
-      }, 3000);
-    },
-
     // 获取用户列表
     async fetchUsers() {
       try {
-        const response = await axios.get(`${BASE_URL}/api/canteen/users`);
-        this.users = response.data;
+        const token = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+        
+        // 验证管理员权限
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+          this.$router.push('/');
+          return;
+        }
+
+        const headers = { 'Authorization': `Bearer ${token}` };
+        console.log('正在获取用户列表...');
+        const response = await axios.get(`${API_BASE}/api/canteen/users`, { headers });
+        console.log('获取到的用户列表:', response.data);
+        this.users = response.data || [];
       } catch (error) {
         console.error('获取用户列表失败:', error);
-        this.showMessage('获取用户列表失败，请稍后重试', 'error');
+        alert('获取用户列表失败：' + (error.response?.data?.message || error.message));
       }
     },
 
-    // 选择与某个用户对话
-    async selectUser(user) {
-      this.selectedUser = this.selectedUser?.id === user.id ? null : user;
-      this.selectedMessage = null; // 清除选中的消息
-      this.adminReply = ''; // 清空回复框
-      this.fetchChatMessages(this.selectedUser?.id);
+    // 选择用户，查看留言记录
+    selectUser(user) {
+      console.log('选择用户:', user);
+      this.selectedUser = user;
+      this.selectedMessage = null;  // 清空选中的消息
+      this.adminReply = '';        // 清空回复框
+      if (user) {
+        this.fetchUserMessages(user.id);
+      } else {
+        this.chatMessages = [];
+      }
     },
 
-    // 选择要回复的消息
-    selectMessage(message) {
-      if (message.admin_reply) {
-        this.showMessage('该消息已经回复过了', 'info');
+    // 获取用户留言记录
+    async fetchUserMessages(userId) {
+      if (!userId) {
+        console.log('未选择用户');
         return;
       }
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+        
+        // 验证管理员权限
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+          this.$router.push('/');
+          return;
+        }
+
+        const headers = { 'Authorization': `Bearer ${token}` };
+        console.log('正在获取用户留言:', userId);
+        const response = await axios.get(`${API_BASE}/api/canteen/feedback/${userId}`, { headers });
+        console.log('获取到的留言:', response.data);
+        this.chatMessages = response.data.map(msg => ({
+          ...msg,
+          isAdmin: msg.admin_reply !== null
+        }));
+      } catch (error) {
+        console.error('获取留言记录失败:', error);
+        alert('获取留言记录失败：' + (error.response?.data?.message || error.message));
+      }
+    },
+
+    // 选择要回复的留言
+    selectMessage(message) {
       this.selectedMessage = message;
-      this.adminReply = ''; // 清空回复框
+      this.adminReply = '';  // 清空回复内容
+    },
+
+    // 发送消息
+    async sendMessage() {
+      if (!this.adminReply.trim()) {
+        alert('请输入回复内容');
+        return;
+      }
+
+      if (!this.selectedUser && !this.selectedMessage) {
+        alert('请选择一个用户或留言进行回复');
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+        
+        // 验证管理员权限
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+          this.$router.push('/');
+          return;
+        }
+
+        const headers = { 'Authorization': `Bearer ${token}` };
+        
+        if (this.selectedMessage) {
+          // 回复特定留言
+          if (!this.selectedMessage.id) {
+            alert('无效的留言ID');
+            return;
+          }
+
+          console.log('正在回复留言:', {
+            id: this.selectedMessage.id,
+            content: this.adminReply
+          });
+
+          const response = await axios.put(
+            `${API_BASE}/api/canteen/feedback/${this.selectedMessage.id}/reply`, 
+            { admin_reply: this.adminReply },
+            { headers }
+          );
+
+          console.log('回复响应:', response.data);
+
+          if (response.data.message === '回复成功') {
+            alert('回复成功');
+            // 刷新消息列表
+            if (this.selectedUser) {
+              await this.fetchUserMessages(this.selectedUser.id);
+            }
+            this.adminReply = '';
+            this.selectedMessage = null;
+          } else {
+            throw new Error(response.data.message || '回复失败');
+          }
+        } else if (this.selectedUser) {
+          // 发送新消息
+          if (!this.selectedUser.id) {
+            alert('无效的用户ID');
+            return;
+          }
+
+          console.log('正在发送新消息:', {
+            user_id: this.selectedUser.id,
+            message: this.adminReply
+          });
+
+          const response = await axios.post(
+            `${API_BASE}/api/canteen/feedback/admin-message`,
+            {
+              user_id: this.selectedUser.id,
+              message: this.adminReply
+            },
+            { headers }
+          );
+
+          console.log('发送响应:', response.data);
+
+          if (response.data.message) {
+            alert(response.data.message);
+            // 刷新消息列表
+            await this.fetchUserMessages(this.selectedUser.id);
+            this.adminReply = '';
+          } else {
+            throw new Error('发送失败');
+          }
+        }
+      } catch (error) {
+        console.error('发送消息失败:', error);
+        const errorMessage = error.response?.data?.message || error.message;
+        console.error('错误详情:', errorMessage);
+        alert('发送消息失败：' + errorMessage);
+      }
     },
 
     // 取消回复
@@ -129,71 +278,102 @@ export default {
       this.adminReply = '';
     },
 
-    // 发送消息（包括回复和新消息）
-    async sendMessage() {
-      if (this.isSending || !this.adminReply.trim()) return;
-      if (!this.selectedUser && !this.selectedMessage) {
-        this.showMessage('请先选择用户或要回复的消息', 'error');
-        return;
-      }
-
-      this.isSending = true;
+    // 删除留言
+    async deleteMessage(message) {
+      if (!confirm('确定要删除这条留言吗？')) return;
 
       try {
-        if (this.selectedMessage) {
-          // 回复已有消息
-          await axios.put(`${BASE_URL}/api/canteen/feedback/${this.selectedMessage.id}/reply`, {
-            admin_reply: this.adminReply.trim()
-          });
-        } else {
-          // 发送新消息，使用与用户提交留言相同的接口
-          await axios.post(`${BASE_URL}/api/canteen/feedback`, {
-            user_id: this.selectedUser.id,
-            message: this.adminReply.trim()
-          });
+        const token = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+        
+        // 验证管理员权限
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+          this.$router.push('/');
+          return;
         }
 
-        this.showMessage('发送成功', 'success');
-        this.adminReply = '';  // 清空输入框
-        this.selectedMessage = null; // 清除选中的消息
-        await this.fetchChatMessages(this.selectedUser?.id);  // 重新获取聊天记录
+        const headers = { 'Authorization': `Bearer ${token}` };
+        console.log('正在删除留言:', message.id);
+        await axios.delete(`${API_BASE}/api/canteen/feedback/${message.id}`, { headers });
+        alert('留言已删除');
+        await this.fetchUserMessages(this.selectedUser.id);
       } catch (error) {
-        console.error('发送失败:', error);
-        this.showMessage('发送失败，请稍后重试', 'error');
-      } finally {
-        this.isSending = false;
+        console.error('删除留言失败:', error);
+        alert('删除留言失败：' + (error.response?.data?.message || error.message));
       }
     },
 
-    // 获取聊天记录
-    async fetchChatMessages(userId = null) {
+    // 删除整个用户的对话
+    async deleteUserConversation() {
+      if (!confirm('确定要删除与该用户的所有留言吗？')) {
+        return;
+      }
+
       try {
-        let response;
-        if (userId) {
-          // 如果选择了特定用户，获取该用户的消息
-          response = await axios.get(`${BASE_URL}/api/canteen/feedbacks?user_id=${userId}`);
-          this.chatMessages = response.data.feedbacks || [];
-        } else {
-          // 否则获取所有消息
-          response = await axios.get(`${BASE_URL}/api/canteen/feedback`);
-          this.chatMessages = response.data || [];
+        const token = localStorage.getItem('authToken');
+        const userRole = localStorage.getItem('userRole');
+        
+        // 验证管理员权限
+        if (userRole !== 'admin' && userRole !== 'super_admin') {
+          this.$router.push('/');
+          return;
         }
 
-        // 处理消息，标记是否为管理员消息
-        this.chatMessages = this.chatMessages.map(msg => ({
-          ...msg,
-          isAdmin: msg.admin_reply !== null
-        }));
+        const headers = { 'Authorization': `Bearer ${token}` };
+        await axios.delete(`${API_BASE}/api/canteen/feedback`, {
+          data: { user_id: this.selectedUser.id },
+          headers
+        });
+
+        alert('该用户的留言已删除');
+        this.selectedUser = null;  // 清空选中的用户
+        this.chatMessages = [];  // 清空聊天记录
       } catch (error) {
-        console.error('获取聊天记录失败:', error);
-        this.showMessage('获取聊天记录失败，请稍后重试', 'error');
+        alert('删除留言失败：' + (error.response?.data?.message || error.message));
       }
+    },
+
+    // 显示消息提示
+    showMessage(content, type) {
+      this.message.content = content;
+      this.message.type = type;
+      this.message.show = true;
+
+      setTimeout(() => {
+        this.message.show = false;
+      }, 3000);
     },
 
     // 格式化时间戳
     formatTimestamp(timestamp) {
+      if (!timestamp) return '';
       const date = new Date(timestamp);
-      return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+      return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  },
+
+  async mounted() {
+    // 检查用户角色
+    const userRole = localStorage.getItem('userRole');
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      this.$router.push('/');
+      return;
+    }
+
+    // 获取用户列表
+    this.loading = true;
+    try {
+      await this.fetchUsers();
+    } catch (error) {
+      console.error('初始化失败:', error);
+    } finally {
+      this.loading = false;
     }
   }
 };
@@ -202,27 +382,37 @@ export default {
 <style scoped>
 .chat-container {
   display: flex;
-  justify-content: space-between;
+  height: 100%;
   padding: 20px;
-  height: calc(100vh - 100px);
+  gap: 20px;
 }
 
 .user-list {
-  width: 25%;
+  width: 250px;
   border-right: 1px solid #ddd;
   padding-right: 20px;
 }
 
+.user-list h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
 .user-list ul {
-  list-style-type: none;
+  list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .user-list li {
   padding: 10px;
+  margin-bottom: 5px;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
-  transition: all 0.3s ease;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .user-list li:hover {
@@ -231,170 +421,171 @@ export default {
 
 .user-list li.active {
   background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.message-count {
+  font-size: 12px;
+  color: #666;
+}
+
+.no-users {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  background-color: #f5f5f5;
   border-radius: 4px;
 }
 
 .chat-box {
-  width: 70%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  padding-left: 20px;
+}
+
+.no-selection {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  margin-top: 20px;
 }
 
 .messages {
   flex: 1;
   overflow-y: auto;
-  margin-bottom: 20px;
   padding: 10px;
 }
 
 .message {
-  padding: 15px;
-  border-radius: 8px;
   margin-bottom: 15px;
-  max-width: 80%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.message:hover {
-  transform: translateX(5px);
+  padding: 10px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
 }
 
 .message.admin {
   background-color: #e3f2fd;
-  margin-left: auto;
 }
 
-.message.user {
-  background-color: #f5f5f5;
-  margin-right: auto;
-}
-
-.message-content {
-  font-size: 14px;
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 5px;
 }
 
+.username {
+  font-weight: bold;
+  color: #333;
+}
+
+.message-content {
+  margin: 10px 0;
+}
+
 .message-reply {
-  font-size: 14px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #ddd;
-}
-
-.timestamp {
-  font-size: 12px;
-  color: #888;
-  margin-top: 5px;
-}
-
-.reply-area {
-  background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
   margin-top: 10px;
-}
-
-.selected-message {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 10px;
-  padding: 8px;
+  padding: 10px;
   background-color: #fff;
   border-radius: 4px;
 }
 
+.timestamp {
+  font-size: 12px;
+  color: #666;
+  text-align: right;
+}
+
+.reply-area {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
 .input-area {
   display: flex;
-  flex-direction: column;
   gap: 10px;
 }
 
 textarea {
-  width: 100%;
-  padding: 12px;
+  flex: 1;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  margin-bottom: 10px;
   resize: vertical;
-  font-size: 14px;
 }
 
-.button-group {
+.action-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.action-btn.delete {
+  background-color: #ef5350;
+  color: white;
+}
+
+.action-btn.reply {
+  background-color: #66bb6a;
+  color: white;
+}
+
+.action-btn:hover {
+  opacity: 0.9;
+}
+
+.selected-message {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
 }
 
-button {
-  padding: 8px 16px;
-  background-color: #4CAF50;
+.cancel-btn {
+  padding: 5px 10px;
+  background-color: #9e9e9e;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin-right: 10px;
 }
 
-button:hover:not(:disabled) {
-  background-color: #45a049;
-  transform: translateY(-1px);
-}
-
-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.cancel-btn {
-  background-color: #f44336;
-}
-
-.cancel-btn:hover {
-  background-color: #d32f2f;
-}
-
-.cancel-btn.small {
-  padding: 4px 8px;
-  font-size: 12px;
-  margin-left: 10px;
-}
-
-.message-toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 12px 24px;
-  border-radius: 4px;
+.send-btn {
+  padding: 10px 20px;
+  background-color: #1976d2;
   color: white;
-  animation: slideIn 0.3s ease-out;
-  z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.message-toast.success {
-  background-color: #4CAF50;
+.send-btn:hover {
+  background-color: #1565c0;
 }
 
-.message-toast.error {
-  background-color: #f44336;
+.no-messages {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
 }
 
-.message-toast.info {
-  background-color: #2196F3;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+.loading {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
 }
 </style>

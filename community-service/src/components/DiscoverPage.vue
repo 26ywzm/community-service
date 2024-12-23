@@ -119,7 +119,7 @@
             <button class="admin-button">订单管理</button>
           </router-link>
           <router-link to="/managefeedback">
-            <button class="admin-button">管理留言</button>
+            <button class="admin-button">意见反馈</button>
           </router-link>
         </div>
       </div>

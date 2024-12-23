@@ -1,10 +1,44 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const authenticateToken = require('../middleware/auth');
+
+// 验证管理员权限的中间件
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const [rows] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    const userRole = rows[0].role;
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
+    req.userRole = userRole; // 将数据库中的角色存储到请求对象中
+    next();
+  } catch (error) {
+    console.error('验证管理员权限失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+};
 
 // 获取所有用户列表
-router.get('/users', async (req, res) => {
+router.get('/users', authenticateToken, async (req, res) => {
   try {
+    // 验证管理员权限
+    const [adminCheck] = await pool.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
     const [users] = await pool.query(`
       SELECT DISTINCT u.id, u.username
       FROM users u
@@ -19,10 +53,20 @@ router.get('/users', async (req, res) => {
 });
 
 // 获取指定用户的留言（用于聊天记录）
-router.get('/feedback/:userId', async (req, res) => {
+router.get('/feedback/:userId', authenticateToken, async (req, res) => {
   const userId = req.params.userId;
   
   try {
+    // 验证管理员权限
+    const [adminCheck] = await pool.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
     const [messages] = await pool.query(`
       SELECT f.id, f.user_id, f.message, f.admin_reply, f.status, f.created_at, f.updated_at
       FROM feedback f
@@ -37,17 +81,18 @@ router.get('/feedback/:userId', async (req, res) => {
 });
 
 // 提交留言或建议
-router.post('/feedback', async (req, res) => {
-  const { user_id, message } = req.body;
+router.post('/feedback', authenticateToken, async (req, res) => {
+  const { message } = req.body;
+  const userId = req.user.id;
   
-  if (!user_id || !message) {
-    return res.status(400).json({ message: '用户 ID 和留言内容不能为空' });
+  if (!message) {
+    return res.status(400).json({ message: '留言内容不能为空' });
   }
   
   try {
     // 插入留言到数据库
     await pool.query('INSERT INTO feedback (user_id, message, status, created_at) VALUES (?, ?, "pending", NOW())', 
-      [user_id, message]);
+      [userId, message]);
     res.status(201).json({ message: '留言提交成功' });
   } catch (error) {
     console.error('留言提交失败:', error);
@@ -56,12 +101,8 @@ router.post('/feedback', async (req, res) => {
 });
 
 // 获取指定用户的留言和回复（用户查看自己的留言）
-router.get('/feedbacks', async (req, res) => {
-  const { user_id } = req.query; // 用户ID作为查询参数传入
-  
-  if (!user_id) {
-    return res.status(400).json({ message: '用户 ID 不能为空' });
-  }
+router.get('/feedbacks', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
   
   try {
     const [feedbacks] = await pool.query(`
@@ -70,7 +111,7 @@ router.get('/feedbacks', async (req, res) => {
       JOIN users u ON f.user_id = u.id
       WHERE f.user_id = ?
       ORDER BY f.created_at DESC
-    `, [user_id]);
+    `, [userId]);
     
     res.status(200).json({ feedbacks });
   } catch (error) {
@@ -80,8 +121,18 @@ router.get('/feedbacks', async (req, res) => {
 });
 
 // 获取所有留言（管理员查看）
-router.get('/feedback', async (req, res) => {
+router.get('/feedback', authenticateToken, async (req, res) => {
   try {
+    // 验证管理员权限
+    const [adminCheck] = await pool.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
     const [feedbacks] = await pool.query(`
       SELECT f.id, u.username, f.message, f.admin_reply, f.status, f.created_at, f.updated_at, f.user_id
       FROM feedback f
@@ -96,58 +147,131 @@ router.get('/feedback', async (req, res) => {
 });
 
 // 更新留言状态（管理员处理）
-router.put('/feedback/:id', async (req, res) => {
+router.put('/feedback/:id', authenticateToken, async (req, res) => {
   const feedbackId = req.params.id;
   const { status } = req.body;
   
-  if (!status) {
-    return res.status(400).json({ message: '状态不能为空' });
-  }
-
   try {
-    await pool.query('UPDATE feedback SET status = ? WHERE id = ?', [status, feedbackId]);
-    res.status(200).json({ message: '留言状态已更新' });
+    // 验证管理员权限
+    const [adminCheck] = await pool.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
+    await pool.query('UPDATE feedback SET status = ?, updated_at = NOW() WHERE id = ?', [status, feedbackId]);
+    res.status(200).json({ message: '状态更新成功' });
   } catch (error) {
-    console.error('更新留言状态失败:', error);
+    console.error('更新状态失败:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
 
 // 管理员回复留言
-router.put('/feedback/:id/reply', async (req, res) => {
+router.put('/feedback/:id/reply', authenticateToken, async (req, res) => {
   const feedbackId = req.params.id;
   const { admin_reply } = req.body;
-  
-  if (!admin_reply) {
-    return res.status(400).json({ message: '回复内容不能为空' });
-  }
+  const connection = await pool.getConnection();
   
   try {
-    await pool.query(
+    await connection.beginTransaction();
+
+    // 验证管理员权限
+    const [adminCheck] = await connection.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      await connection.rollback();
+      return res.status(403).json({ message: '权限不足' });
+    }
+
+    // 检查留言是否存在
+    const [feedback] = await connection.query(
+      'SELECT id FROM feedback WHERE id = ?',
+      [feedbackId]
+    );
+
+    if (feedback.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: '留言不存在' });
+    }
+
+    // 更新留言
+    await connection.query(
       'UPDATE feedback SET admin_reply = ?, status = "processed", updated_at = NOW() WHERE id = ?',
       [admin_reply, feedbackId]
     );
+
+    await connection.commit();
     res.status(200).json({ message: '回复成功' });
   } catch (error) {
-    console.error('回复留言失败:', error);
+    await connection.rollback();
+    console.error('回复失败:', error);
+    res.status(500).json({ message: error.message || '服务器错误' });
+  } finally {
+    connection.release();
+  }
+});
+
+// 删除留言
+router.delete('/feedback/:id', authenticateToken, async (req, res) => {
+  const feedbackId = req.params.id;
+  
+  try {
+    // 验证管理员权限
+    const [adminCheck] = await pool.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
+    // 首先检查留言是否存在
+    const [feedbacks] = await pool.query('SELECT user_id FROM feedback WHERE id = ?', [feedbackId]);
+    if (feedbacks.length === 0) {
+      return res.status(404).json({ message: '留言不存在' });
+    }
+
+    // 执行删除操作
+    await pool.query('DELETE FROM feedback WHERE id = ?', [feedbackId]);
+    res.status(200).json({ message: '留言已删除' });
+  } catch (error) {
+    console.error('删除留言失败:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
 
 // 管理员发送新消息
-router.post('/feedback/admin-message', async (req, res) => {
+router.post('/feedback/admin-message', authenticateToken, async (req, res) => {
   const { user_id, message } = req.body;
   
-  if (!user_id || !message) {
-    return res.status(400).json({ message: '用户ID和消息内容不能为空' });
-  }
-  
   try {
-    await pool.query(`
-      INSERT INTO feedback (user_id, message, admin_reply, status, created_at)
-      VALUES (?, ?, NULL, 'admin_sent', NOW())
-    `, [user_id, message]);
-    
+    // 验证管理员权限
+    const [adminCheck] = await pool.query(
+      'SELECT role FROM users WHERE id = ?',
+      [req.user.id]
+    );
+
+    if (!adminCheck.length || (adminCheck[0].role !== 'admin' && adminCheck[0].role !== 'super_admin')) {
+      return res.status(403).json({ message: '权限不足' });
+    }
+
+    if (!user_id || !message) {
+      return res.status(400).json({ message: '用户ID和消息内容不能为空' });
+    }
+
+    // 插入管理员消息
+    await pool.query(
+      'INSERT INTO feedback (user_id, message, status, is_admin_message, created_at) VALUES (?, ?, "admin_sent", 1, NOW())',
+      [user_id, message]
+    );
     res.status(201).json({ message: '消息发送成功' });
   } catch (error) {
     console.error('发送消息失败:', error);

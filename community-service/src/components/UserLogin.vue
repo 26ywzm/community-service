@@ -17,7 +17,6 @@
 
 <script>
 import axios from 'axios';
-import { handleApiError } from '../utils/errorHandler';
 const API = process.env.VUE_APP_API_URL;
 
 export default {
@@ -32,7 +31,7 @@ export default {
     async login() {
       try {
         const response = await axios.post(`${API}/login`, {
-          email: this.email,      // 发送 email 和 password
+          email: this.email,
           password: this.password,
         });
 
@@ -54,28 +53,34 @@ export default {
             await this.$router.push('/profile');
             break;
           default:
-            await this.$router.push('/profile');
+            await this.$router.push('/');
+            break;
         }
-
       } catch (error) {
-        // 根据错误类型显示不同的错误信息
+        // 处理不同类型的错误
         if (error.response) {
-          // 服务器返回了错误响应
-          if (error.response.status === 401) {
-            alert('邮箱或密码错误，请重试。');
-          } else if (error.response.data && error.response.data.message) {
-            alert(error.response.data.message);
-          } else {
-            alert('登录失败，请稍后重试。');
+          // 服务器返回错误状态码
+          switch (error.response.status) {
+            case 401:
+              alert('登录失败：邮箱或密码错误');
+              break;
+            case 404:
+              alert('登录失败：用户不存在');
+              break;
+            case 429:
+              alert('登录失败：尝试次数过多，请稍后再试');
+              break;
+            default:
+              alert('登录失败：' + (error.response.data.message || '未知错误'));
           }
         } else if (error.request) {
-          // 请求已发出，但没有收到响应
-          alert('无法连接到服务器，请检查网络连接。');
+          // 请求发出但没有收到响应
+          alert('登录失败：无法连接到服务器，请检查网络连接');
         } else {
-          // 请求配置出错
-          alert('登录请求出错，请稍后重试。');
+          // 请求设置时发生错误
+          alert('登录失败：' + error.message);
         }
-        handleApiError(error);
+        console.error('登录错误:', error);
       }
     },
   },

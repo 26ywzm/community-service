@@ -77,6 +77,29 @@ const validateEmail = (email) => {
   return emailRegex.test(email);
 };
 
+// 验证管理员权限的中间件
+const verifyAdmin = async (req, res, next) => {
+  try {
+    // 验证用户角色
+    const [rows] = await pool.query('SELECT role FROM users WHERE id = ?', [req.user.id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+
+    const userRole = rows[0].role;
+    if (userRole !== 'admin' && userRole !== 'super_admin') {
+      return res.status(403).json({ message: '权限不足，需要管理员权限' });
+    }
+
+    req.userRole = userRole; // 将数据库中的角色存储到请求对象中
+    next();
+  } catch (error) {
+    console.error('验证管理员权限失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+};
+
 // 用户注册
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
@@ -454,13 +477,8 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 // 获取用户列表
-router.get('/users', authenticateToken, async (req, res) => {
+router.get('/users', authenticateToken, verifyAdmin, async (req, res) => {
   try {
-    // 检查请求用户的权限
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ message: '权限不足' });
-    }
-
     // 分页参数
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -518,10 +536,10 @@ router.get('/users', authenticateToken, async (req, res) => {
 });
 
 // 获取管理员列表
-router.get('/admins', authenticateToken, async (req, res) => {
+router.get('/admins', authenticateToken, verifyAdmin, async (req, res) => {
   try {
     // 只允许超级管理员查看管理员列表
-    if (req.user.role !== 'super_admin') {
+    if (req.userRole !== 'super_admin') {
       return res.status(403).json({ message: '权限不足' });
     }
 
@@ -577,13 +595,13 @@ router.get('/admins', authenticateToken, async (req, res) => {
 });
 
 // 升级用户为管理员
-router.post('/promote/:id', authenticateToken, async (req, res) => {
+router.post('/promote/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const userId = req.params.id;
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     // 只允许超级管理员进行角色升级
-    if (req.user.role !== 'super_admin') {
+    if (req.userRole !== 'super_admin') {
       throw new Error('权限不足');
     }
     // 检查要升级的用户是否存在
@@ -621,13 +639,13 @@ router.post('/promote/:id', authenticateToken, async (req, res) => {
 });
 
 // 降级管理员为普通用户
-router.post('/demote/:id', authenticateToken, async (req, res) => {
+router.post('/demote/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const userId = req.params.id;
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
     // 只允许超级管理员进行角色降级
-    if (req.user.role !== 'super_admin') {
+    if (req.userRole !== 'super_admin') {
       throw new Error('权限不足');
     }
     // 检查要降级的用户是否存在
@@ -665,15 +683,10 @@ router.post('/demote/:id', authenticateToken, async (req, res) => {
 });
 
 // 删除用户
-router.delete('/users/:id', authenticateToken, async (req, res) => {
+router.delete('/users/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const userId = req.params.id;
 
   try {
-    // 检查权限
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      return res.status(403).json({ message: '权限不足' });
-    }
-
     // 检查要删除的用户是否存在
     const [user] = await pool.query('SELECT role FROM users WHERE id = ?', [userId]);
     if (user.length === 0) {
@@ -686,7 +699,7 @@ router.delete('/users/:id', authenticateToken, async (req, res) => {
     }
 
     // 如果是管理员，禁止删除其他管理员
-    if (req.user.role === 'admin' && user[0].role === 'admin') {
+    if (req.userRole === 'admin' && user[0].role === 'admin') {
       return res.status(403).json({ message: '管理员不能删除其他管理员账户' });
     }
 
@@ -719,7 +732,7 @@ router.get('/news/:id', async (req, res) => {
 });
 
 // 发布文章
-router.post('/articles', upload.single('image'), async (req, res) => {
+router.post('/articles', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
   const { title, content, category, image_url } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -765,15 +778,15 @@ router.get('/articles/:id', async (req, res) => {
 });
 
 // 修改文章
-router.put('/articles/:id', authenticateToken, upload.single('image'), async (req, res) => {
+router.put('/articles/:id', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
   const articleId = req.params.id;
   const { title, content, category, image_url } = req.body;
 
   try {
     console.log('当前用户信息:', req.user);
     // 检查用户权限
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-      console.log('权限检查失败 - 用户角色:', req.user.role);
+    if (req.userRole !== 'admin' && req.userRole !== 'super_admin') {
+      console.log('权限检查失败 - 用户角色:', req.userRole);
       return res.status(403).json({ message: '权限不足，只有管理员可以修改文章' });
     }
     console.log('权限检查通过');
@@ -847,11 +860,11 @@ router.put('/articles/:id', authenticateToken, upload.single('image'), async (re
 });
 
 // 删除文章
-router.delete('/articles/:id', authenticateToken, async (req, res) => {
+router.delete('/articles/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const articleId = req.params.id;
   try {
     // 检查用户权限
-    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+    if (req.userRole !== 'admin' && req.userRole !== 'super_admin') {
       return res.status(403).json({ message: '权限不足，只有管理员可以删除文章' });
     }
 
@@ -900,7 +913,7 @@ router.get('/canteen/menu', async (req, res) => {
 });
 
 // 添加菜品
-router.post('/canteen/menu', upload.single('image'), async (req, res) => {
+router.post('/canteen/menu', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
   const { name, price, image_url, description } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -915,7 +928,7 @@ router.post('/canteen/menu', upload.single('image'), async (req, res) => {
 });
 
 // 更新菜品
-router.put('/canteen/menu/:id', authenticateToken, upload.single('image'), async (req, res) => {
+router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
   const menuItemId = req.params.id;
   const { name, price, image_url, description } = req.body;
 
@@ -989,7 +1002,7 @@ router.put('/canteen/menu/:id', authenticateToken, upload.single('image'), async
 });
 
 // 删除菜品
-router.delete('/canteen/menu/:id', authenticateToken, async (req, res) => {
+router.delete('/canteen/menu/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const menuItemId = req.params.id;
 
   try {
@@ -1227,8 +1240,8 @@ router.get('/orders/user', authenticateToken, async (req, res) => {
 });
 
 // 获取所有订单（管理员接口）
-router.get('/canteen/orders', authenticateToken, async (req, res) => {
-  const userRole = req.user.role;
+router.get('/canteen/orders', authenticateToken, verifyAdmin, async (req, res) => {
+  const userRole = req.userRole;
   const { page = 1, limit = 10, status, startDate, endDate } = req.query;
   const offset = (page - 1) * limit;
 
@@ -1320,10 +1333,10 @@ router.get('/canteen/orders', authenticateToken, async (req, res) => {
 });
 
 // 更新订单状态
-router.put('/canteen/orders/:id', authenticateToken, async (req, res) => {
+router.put('/canteen/orders/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const orderId = req.params.id;
   const { status } = req.body;
-  const userRole = req.user.role;
+  const userRole = req.userRole;
 
   if (userRole !== 'admin' && userRole !== 'super_admin') {
     return res.status(403).json({ message: '无权访问' });
@@ -1383,9 +1396,9 @@ router.put('/canteen/orders/:id', authenticateToken, async (req, res) => {
 });
 
 // 删除订单
-router.delete('/canteen/orders/:id', authenticateToken, async (req, res) => {
+router.delete('/canteen/orders/:id', authenticateToken, verifyAdmin, async (req, res) => {
   const orderId = req.params.id;
-  const userRole = req.user.role;
+  const userRole = req.userRole;
 
   if (userRole !== 'admin' && userRole !== 'super_admin') {
     return res.status(403).json({ message: '无权访问' });

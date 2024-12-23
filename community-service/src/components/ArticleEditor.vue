@@ -55,9 +55,12 @@
 
 <script>
 import axios from 'axios';
+import { adminAuth } from '../mixins/adminAuth';
 const API = process.env.VUE_APP_API_URL;
 
 export default {
+  name: 'ArticleEditor',
+  mixins: [adminAuth],
   data() {
     return {
       title: '',
@@ -72,6 +75,7 @@ export default {
   },
   methods: {
     async fetchArticles(category) {
+      if (!this.checkAdminAuth()) return;
       try {
         const token = localStorage.getItem('authToken');
         const headers = { 'Authorization': `Bearer ${token}` };
@@ -93,16 +97,17 @@ export default {
       this.imageFile = event.target.files[0];
     },
     async submitArticle() {
-      const formData = new FormData();
-      formData.append('title', this.title);
-      formData.append('content', this.content);
-      formData.append('category', this.category);
-      formData.append('image_url', this.imageUrl);
-      if (this.imageFile) {
-        formData.append('image', this.imageFile);
-      }
-
+      if (!this.checkAdminAuth()) return;
       try {
+        const formData = new FormData();
+        formData.append('title', this.title);
+        formData.append('content', this.content);
+        formData.append('category', this.category);
+        formData.append('image_url', this.imageUrl);
+        if (this.imageFile) {
+          formData.append('image', this.imageFile);
+        }
+
         const token = localStorage.getItem('authToken');
         const headers = {
           'Content-Type': 'multipart/form-data',
@@ -126,6 +131,7 @@ export default {
       }
     },
     editArticle(article) {
+      if (!this.checkAdminAuth()) return;
       this.title = article.title;
       this.content = article.content;
       this.imageUrl = article.image_url;
@@ -133,6 +139,7 @@ export default {
       this.editingArticleId = article.id;
     },
     async deleteArticle(articleId) {
+      if (!this.checkAdminAuth()) return;
       if (confirm('确定要删除这篇文章吗？')) {
         try {
           const token = localStorage.getItem('authToken');
@@ -192,6 +199,10 @@ export default {
     },
   },
   mounted() {
+    if (!this.checkAdminAuth()) {
+      this.$router.push('/');
+      return;
+    }
     this.fetchArticles();
   }
 };
