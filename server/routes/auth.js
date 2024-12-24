@@ -59,42 +59,6 @@ const handleUpload = (req, res, next) => {
   });
 };
 
-// 图片压缩中间件
-const compressImage = async (req, res, next) => {
-  if (!req.file) {
-    return next();
-  }
-
-  try {
-    const filePath = req.file.path;
-    const compressedFilePath = path.join(
-      path.dirname(filePath),
-      'compressed-' + path.basename(filePath)
-    );
-
-    await sharp(filePath)
-      .resize(1000, 1000, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .jpeg({
-        quality: 80,
-        progressive: true
-      })
-      .toFile(compressedFilePath);
-
-    // 删除原始文件
-    fs.unlinkSync(filePath);
-    // 将压缩后的文件移动到原始文件位置
-    fs.renameSync(compressedFilePath, filePath);
-    
-    next();
-  } catch (error) {
-    console.error('图片压缩失败:', error);
-    next(error);
-  }
-};
-
 // 登录频率限制
 const loginLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 15分钟
@@ -751,7 +715,7 @@ router.get('/news/:id', async (req, res) => {
 });
 
 // 发布文章
-router.post('/articles', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
+router.post('/articles', authenticateToken, verifyAdmin, handleUpload, async (req, res) => {
   const { title, content, category, image_url } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -797,7 +761,7 @@ router.get('/articles/:id', async (req, res) => {
 });
 
 // 修改文章
-router.put('/articles/:id', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
+router.put('/articles/:id', authenticateToken, verifyAdmin, handleUpload, async (req, res) => {
   const articleId = req.params.id;
   const { title, content, category, image_url } = req.body;
 
@@ -932,7 +896,7 @@ router.get('/canteen/menu', async (req, res) => {
 });
 
 // 添加菜品
-router.post('/canteen/menu', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
+router.post('/canteen/menu', authenticateToken, verifyAdmin, upload, async (req, res) => {
   const { name, price, image_url, description } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -947,7 +911,7 @@ router.post('/canteen/menu', authenticateToken, verifyAdmin, handleUpload, compr
 });
 
 // 更新菜品
-router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
+router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, upload, async (req, res) => {
   const menuItemId = req.params.id;
   const { name, price, image_url, description } = req.body;
 

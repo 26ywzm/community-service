@@ -74,92 +74,18 @@ export default {
     this.fetchMenuItems(); // 加载菜品数据
   },
   methods: {
-    async compressImage(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            let { width, height } = img;
-            
-            // 计算图片的复杂度（基于尺寸）
-            const complexity = width * height;
-            
-            // 根据复杂度动态调整压缩参数
-            let quality = 0.8;
-            let maxDimension = 1200;
-            
-            if (complexity > 1920 * 1080) {
-              quality = 0.7;
-              maxDimension = 1000;
-            }
-            
-            // 保持宽高比进行缩放
-            if (width > height) {
-              if (width > maxDimension) {
-                height = Math.round((height * maxDimension) / width);
-                width = maxDimension;
-              }
-            } else {
-              if (height > maxDimension) {
-                width = Math.round((width * maxDimension) / height);
-                height = maxDimension;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // 递归压缩，直到文件大小合适
-            const compressRecursive = (currentQuality) => {
-              canvas.toBlob((blob) => {
-                const compressedFile = new File([blob], file.name, {
-                  type: 'image/jpeg',
-                  lastModified: Date.now()
-                });
-                
-                // 如果文件仍然太大且质量还可以继续降低
-                if (compressedFile.size > 1.5 * 1024 * 1024 && currentQuality > 0.3) {
-                  compressRecursive(currentQuality - 0.1);
-                } else {
-                  console.log('最终图片大小:', (compressedFile.size / 1024 / 1024).toFixed(2) + 'MB');
-                  resolve(compressedFile);
-                }
-              }, 'image/jpeg', currentQuality);
-            };
-            
-            // 开始压缩
-            compressRecursive(quality);
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-    },
-    async handleFileUpload(event) {
+    handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
 
-      // 检查文件类型
+      // 只检查文件类型
       if (!file.type.startsWith('image/')) {
         alert('请上传图片文件');
         this.$refs.fileInput.value = '';
         return;
       }
 
-      try {
-        console.log('原始图片大小:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
-        // 对所有图片进行压缩，但使用智能压缩算法
-        this.imageFile = await this.compressImage(file);
-        console.log('压缩后图片大小:', (this.imageFile.size / 1024 / 1024).toFixed(2) + 'MB');
-      } catch (error) {
-        console.error('图片处理失败:', error);
-        alert('图片处理失败，请重试');
-        this.$refs.fileInput.value = '';
-      }
+      this.imageFile = file;
     },
     async fetchMenuItems() {
       try {
@@ -188,36 +114,19 @@ export default {
       }
 
       try {
-        const response = await axios.post(`${API}/canteen/menu`, formData, {
+        await axios.post(`${API}/canteen/menu`, formData, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'multipart/form-data'
           },
-          withCredentials: true,
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-          timeout: 60000, // 增加超时时间到60秒
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            console.log('上传进度：', percentCompleted);
-          }
+          withCredentials: true
         });
         
-        console.log('上传成功：', response.data);
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();
       } catch (error) {
-        console.error('上传错误：', error);
-        if (error.response) {
-          console.error('错误响应：', error.response.data);
-          alert(error.response.data.message || '添加菜品失败，请重试');
-        } else if (error.request) {
-          console.error('请求错误：', error.request);
-          alert('网络连接失败，请检查网络后重试');
-        } else {
-          console.error('错误：', error.message);
-          alert('添加菜品失败，请重试');
-        }
+        console.error('添加菜品失败:', error);
+        alert('添加菜品失败，请重试');
       }
     },
     async deleteMenuItem(itemId) {
