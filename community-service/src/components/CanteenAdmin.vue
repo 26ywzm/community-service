@@ -81,18 +81,30 @@ export default {
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
+            let { width, height } = img;
             
-            // 如果图片大于 1200px，按比例缩小
-            const maxSize = 1200;
-            if (width > maxSize || height > maxSize) {
-              if (width > height) {
-                height = Math.round((height * maxSize) / width);
-                width = maxSize;
-              } else {
-                width = Math.round((width * maxSize) / height);
-                height = maxSize;
+            // 计算图片的复杂度（基于尺寸）
+            const complexity = width * height;
+            
+            // 根据复杂度动态调整压缩参数
+            let quality = 0.8;
+            let maxDimension = 1200;
+            
+            if (complexity > 1920 * 1080) {
+              quality = 0.7;
+              maxDimension = 1000;
+            }
+            
+            // 保持宽高比进行缩放
+            if (width > height) {
+              if (width > maxDimension) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              }
+            } else {
+              if (height > maxDimension) {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
               }
             }
 
@@ -101,25 +113,26 @@ export default {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            // 压缩图片质量
-            canvas.toBlob((blob) => {
-              const compressedFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-              });
-              
-              // 如果压缩后的文件仍然太大，继续压缩
-              if (compressedFile.size > 2 * 1024 * 1024) {
-                canvas.toBlob((blob) => {
-                  resolve(new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                  }));
-                }, 'image/jpeg', 0.6); // 使用更低的质量
-              } else {
-                resolve(compressedFile);
-              }
-            }, 'image/jpeg', 0.8); // 0.8 是压缩质量
+            // 递归压缩，直到文件大小合适
+            const compressRecursive = (currentQuality) => {
+              canvas.toBlob((blob) => {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now()
+                });
+                
+                // 如果文件仍然太大且质量还可以继续降低
+                if (compressedFile.size > 1.5 * 1024 * 1024 && currentQuality > 0.3) {
+                  compressRecursive(currentQuality - 0.1);
+                } else {
+                  console.log('最终图片大小:', (compressedFile.size / 1024 / 1024).toFixed(2) + 'MB');
+                  resolve(compressedFile);
+                }
+              }, 'image/jpeg', currentQuality);
+            };
+            
+            // 开始压缩
+            compressRecursive(quality);
           };
           img.src = e.target.result;
         };
@@ -130,14 +143,23 @@ export default {
       const file = event.target.files[0];
       if (!file) return;
 
-      // 只检查文件类型
+      // 检查文件类型
       if (!file.type.startsWith('image/')) {
         alert('请上传图片文件');
         this.$refs.fileInput.value = '';
         return;
       }
 
-      this.imageFile = file;
+      try {
+        console.log('原始图片大小:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+        // 对所有图片进行压缩，但使用智能压缩算法
+        this.imageFile = await this.compressImage(file);
+        console.log('压缩后图片大小:', (this.imageFile.size / 1024 / 1024).toFixed(2) + 'MB');
+      } catch (error) {
+        console.error('图片处理失败:', error);
+        alert('图片处理失败，请重试');
+        this.$refs.fileInput.value = '';
+      }
     },
     async fetchMenuItems() {
       try {
