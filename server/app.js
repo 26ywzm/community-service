@@ -50,6 +50,10 @@ app.use(cors({
 // 确保 OPTIONS 请求能正确响应
 app.options('*', cors());
 
+// 增加请求体大小限制
+app.use(express.json({limit: '10mb'}));
+app.use(express.urlencoded({limit: '10mb', extended: true}));
+
 // 添加自定义 CORS 中间件作为备份
 app.use((req, res, next) => {
     const origin = req.headers.origin;
@@ -67,9 +71,6 @@ app.use((req, res, next) => {
 
 app.use(compression()); // 压缩中间件
 app.use(morgan('dev')); // 日志中间件
-app.use(express.json()); // JSON解析
-app.use(express.urlencoded({ extended: true })); // URL编码解析
-
 
 // 静态文件服务
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
