@@ -130,33 +130,14 @@ export default {
       const file = event.target.files[0];
       if (!file) return;
 
-      // 检查文件类型
+      // 只检查文件类型
       if (!file.type.startsWith('image/')) {
         alert('请上传图片文件');
         this.$refs.fileInput.value = '';
         return;
       }
 
-      // 检查文件大小（限制为 5MB）
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (file.size > maxSize) {
-        alert('图片大小不能超过 5MB，请压缩后重试');
-        this.$refs.fileInput.value = '';
-        return;
-      }
-
-      try {
-        // 如果文件大于 2MB，进行压缩
-        if (file.size > 2 * 1024 * 1024) {
-          this.imageFile = await this.compressImage(file);
-        } else {
-          this.imageFile = file;
-        }
-      } catch (error) {
-        console.error('图片处理失败:', error);
-        alert('图片处理失败，请重试');
-        this.$refs.fileInput.value = '';
-      }
+      this.imageFile = file;
     },
     async fetchMenuItems() {
       try {

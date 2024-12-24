@@ -29,8 +29,8 @@ const allowedOrigins = [
     'http://127.0.0.1:8080'      // 本地开发环境
 ];
 
-app.use(express.json({limit: '50mb'}));
-app.use(express.urlencoded({limit: '50mb', extended: true}));
+app.use(express.json({limit: false}));
+app.use(express.urlencoded({limit: false, extended: true}));
 
 app.use(cors({
     origin: function(origin, callback) {

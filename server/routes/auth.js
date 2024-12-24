@@ -40,7 +40,6 @@ const uploadErrorHandler = (err, req, res, next) => {
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB
     files: 1 // 一次只允许上传一个文件
   },
   fileFilter: function (req, file, cb) {
