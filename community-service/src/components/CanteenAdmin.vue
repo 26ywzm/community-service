@@ -166,7 +166,10 @@ export default {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          withCredentials: true,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity
         });
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();

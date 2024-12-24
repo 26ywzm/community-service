@@ -29,13 +29,16 @@ const allowedOrigins = [
     'http://127.0.0.1:8080'      // 本地开发环境
 ];
 
+app.use(express.json({limit: '50mb'}));
+app.use(express.urlencoded({limit: '50mb', extended: true}));
+
 app.use(cors({
     origin: function(origin, callback) {
         // 允许没有 origin 的请求（比如移动端应用）
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-            callback(null, true);
+            callback(null, origin);
         } else {
             callback(new Error('不允许的来源'));
         }
@@ -49,10 +52,6 @@ app.use(cors({
 
 // 确保 OPTIONS 请求能正确响应
 app.options('*', cors());
-
-// 增加请求体大小限制
-app.use(express.json({limit: '10mb'}));
-app.use(express.urlencoded({limit: '10mb', extended: true}));
 
 // 添加自定义 CORS 中间件作为备份
 app.use((req, res, next) => {
