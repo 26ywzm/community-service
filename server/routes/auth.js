@@ -896,13 +896,15 @@ router.get('/canteen/menu', async (req, res) => {
 });
 
 // 添加菜品
-router.post('/canteen/menu', authenticateToken, verifyAdmin, upload, async (req, res) => {
-  const { name, price, image_url, description } = req.body;
-  const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
+router.post('/canteen/menu', authenticateToken, verifyAdmin, handleUpload, async (req, res) => {
+  const { name, price, description } = req.body;
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : req.body.image_url;
 
   try {
-    await pool.query('INSERT INTO menu_items (name, price, image_url, description) VALUES (?, ?, ?, ?)',
-      [name, price, uploadedImageUrl, description]);
+    await pool.query(
+      'INSERT INTO menu_items (name, price, image_url, description) VALUES (?, ?, ?, ?)',
+      [name, price, imageUrl, description]
+    );
     res.status(201).json({ message: '菜品添加成功' });
   } catch (error) {
     console.error('添加菜品失败:', error);
@@ -911,75 +913,30 @@ router.post('/canteen/menu', authenticateToken, verifyAdmin, upload, async (req,
 });
 
 // 更新菜品
-router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, upload, async (req, res) => {
+router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, handleUpload, async (req, res) => {
   const menuItemId = req.params.id;
-  const { name, price, image_url, description } = req.body;
+  const { name, price, description } = req.body;
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : req.body.image_url;
 
   try {
-    // 检查菜品是否存在
-    const [existingItem] = await pool.query('SELECT * FROM menu_items WHERE id = ?', [menuItemId]);
-    if (existingItem.length === 0) {
-      return res.status(404).json({ message: '菜品未找到' });
-    }
-
-    // 验证必填字段
-    if (!name || !price) {
-      return res.status(400).json({ message: '菜品名称和价格是必填项' });
-    }
-
-    // 验证价格格式
-    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
-      return res.status(400).json({ message: '价格必须是大于0的数字' });
-    }
-
-    // 处理图片
-    let finalImageUrl = existingItem[0].image_url; // 默认保持原有图片
-    if (req.file) {
-      // 如果上传了新图片
-      finalImageUrl = `/uploads/${req.file.filename}`;
-      
-      // 删除旧图片
-      if (existingItem[0].image_url) {
-        const oldImagePath = path.join(__dirname, '../uploads', path.basename(existingItem[0].image_url));
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlink(oldImagePath, (err) => {
-            if (err) {
-              console.error('删除旧图片失败:', err);
-            }
-          });
-        }
-      }
-    } else if (image_url) {
-      // 如果提供了新的图片URL但没有上传文件
-      finalImageUrl = image_url;
-    }
-
-    // 更新菜品信息
-    const [result] = await pool.query(
-      `UPDATE menu_items 
-       SET name = ?, 
-           price = ?, 
-           image_url = ?, 
-           description = ?,
-           updated_at = CURRENT_TIMESTAMP 
-       WHERE id = ?`,
-      [name, parseFloat(price), finalImageUrl, description || '', menuItemId]
+    await pool.query(
+      'UPDATE menu_items SET name = ?, price = ?, image_url = ?, description = ? WHERE id = ?',
+      [name, price, imageUrl, description, menuItemId]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: '菜品更新失败' });
-    }
-
-    // 获取更新后的菜品信息
-    const [updatedItem] = await pool.query('SELECT * FROM menu_items WHERE id = ?', [menuItemId]);
-
-    res.status(200).json({
-      message: '菜品更新成功',
-      menuItem: updatedItem[0]
-    });
-
+    res.status(200).json({ message: '菜品更新成功' });
   } catch (error) {
     console.error('更新菜品失败:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+});
+
+// 获取菜品列表
+router.get('/canteen/menu', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM menu_items ORDER BY id DESC');
+    res.status(200).json(rows);
+  } catch (error) {
+    console.error('获取菜品列表失败:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 });
@@ -989,40 +946,8 @@ router.delete('/canteen/menu/:id', authenticateToken, verifyAdmin, async (req, r
   const menuItemId = req.params.id;
 
   try {
-    // 检查菜品是否存在
-    const [existingItem] = await pool.query('SELECT * FROM menu_items WHERE id = ?', [menuItemId]);
-    if (existingItem.length === 0) {
-      return res.status(404).json({ message: '菜品未找到' });
-    }
-
-    // 检查是否有相关订单
-    const [orderDetails] = await pool.query(
-      'SELECT COUNT(*) as count FROM order_details WHERE menu_item_id = ?',
-      [menuItemId]
-    );
-
-    if (orderDetails[0].count > 0) {
-      // 如果有相关订单，将菜品标记为不可用而不是删除
-      await pool.query('UPDATE menu_items SET available = FALSE WHERE id = ?', [menuItemId]);
-      return res.status(200).json({ message: '菜品已标记为不可用' });
-    }
-
-    // 删除菜品图片
-    if (existingItem[0].image_url) {
-      const imagePath = path.join(__dirname, '../uploads', path.basename(existingItem[0].image_url));
-      if (fs.existsSync(imagePath)) {
-        fs.unlink(imagePath, (err) => {
-          if (err) {
-            console.error('删除图片失败:', err);
-          }
-        });
-      }
-    }
-
-    // 删除菜品记录
     await pool.query('DELETE FROM menu_items WHERE id = ?', [menuItemId]);
-    res.status(200).json({ message: '菜品已成功删除' });
-
+    res.status(200).json({ message: '菜品删除成功' });
   } catch (error) {
     console.error('删除菜品失败:', error);
     res.status(500).json({ message: '服务器错误' });

@@ -25,12 +25,13 @@ app.use(helmet({
 // CORS 配置
 const allowedOrigins = [
     'https://sheqv.26ywzm.icu',  // 生产环境
+    'https://api.26ywzm.icu',   // 生产环境
     'http://localhost:8080',      // 本地开发环境
     'http://127.0.0.1:8080'      // 本地开发环境
 ];
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({limit: '50mb'}));
+app.use(express.urlencoded({limit: '50mb', extended: true}));
 
 app.use((req, res, next) => {
     const origin = req.headers.origin;
