@@ -84,8 +84,8 @@ export default {
             let width = img.width;
             let height = img.height;
             
-            // 如果图片大于 1000px，按比例缩小
-            const maxSize = 1000;
+            // 如果图片大于 1200px，按比例缩小
+            const maxSize = 1200;
             if (width > maxSize || height > maxSize) {
               if (width > height) {
                 height = Math.round((height * maxSize) / width);
@@ -103,18 +103,30 @@ export default {
             
             // 压缩图片质量
             canvas.toBlob((blob) => {
-              resolve(new File([blob], file.name, {
+              const compressedFile = new File([blob], file.name, {
                 type: 'image/jpeg',
                 lastModified: Date.now()
-              }));
-            }, 'image/jpeg', 0.7); // 0.7 是压缩质量
+              });
+              
+              // 如果压缩后的文件仍然太大，继续压缩
+              if (compressedFile.size > 2 * 1024 * 1024) {
+                canvas.toBlob((blob) => {
+                  resolve(new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                  }));
+                }, 'image/jpeg', 0.6); // 使用更低的质量
+              } else {
+                resolve(compressedFile);
+              }
+            }, 'image/jpeg', 0.8); // 0.8 是压缩质量
           };
           img.src = e.target.result;
         };
         reader.readAsDataURL(file);
       });
     },
-    handleFileUpload(event) {
+    async handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -125,15 +137,26 @@ export default {
         return;
       }
 
-      // 检查文件大小（限制为 1MB）
-      const maxSize = 1 * 1024 * 1024; // 1MB
+      // 检查文件大小（限制为 5MB）
+      const maxSize = 5 * 1024 * 1024; // 5MB
       if (file.size > maxSize) {
-        alert('图片大小不能超过 1MB，请压缩后重试');
+        alert('图片大小不能超过 5MB，请压缩后重试');
         this.$refs.fileInput.value = '';
         return;
       }
 
-      this.imageFile = file;
+      try {
+        // 如果文件大于 2MB，进行压缩
+        if (file.size > 2 * 1024 * 1024) {
+          this.imageFile = await this.compressImage(file);
+        } else {
+          this.imageFile = file;
+        }
+      } catch (error) {
+        console.error('图片处理失败:', error);
+        alert('图片处理失败，请重试');
+        this.$refs.fileInput.value = '';
+      }
     },
     async fetchMenuItems() {
       try {
