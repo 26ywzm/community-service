@@ -12,38 +12,46 @@ dotenv.config();
 
 const app = express();
 
-
-
 // 基础中间件
-// Helmet 配置
+// Helmet 配置，优化安全策略
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false
-})); // 安全中间件
+}));
 
 // CORS 配置
 const allowedOrigins = [
     'https://sheqv.26ywzm.icu',  // 生产环境
     'https://api.26ywzm.icu',   // 生产环境
-    'http://localhost:8080',      // 本地开发环境
-    'http://127.0.0.1:8080'      // 本地开发环境
+    'https://localhost:8080',    // 本地开发环境
+    'https://127.0.0.1:8080'    // 本地开发环境
 ];
 
-app.use(express.json({limit: '50mb'}));
-app.use(express.urlencoded({limit: '50mb', extended: true}));
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);  // 允许请求来自 allowedOrigins 中的域
+        } else {
+            callback(new Error('Not allowed by CORS'));  // 拒绝跨域请求
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,  // 允许发送 cookie
+    preflightContinue: false,  // 不传递预检请求到下一个路由
+    optionsSuccessStatus: 200
+};
 
+// 应用 CORS 中间件
+app.use(cors(corsOptions));
+
+// 解析 JSON 和 URL 编码数据，限制大小
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// 处理预检请求 (OPTIONS)
 app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Max-Age', '86400');
-    }
-    
-    // 处理预检请求
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
@@ -61,8 +69,6 @@ const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 const canteenRoutes = require('./routes/canteen');
 app.use('/api/canteen', canteenRoutes);
-
-
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
