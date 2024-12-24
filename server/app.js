@@ -38,7 +38,11 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false
 })); // 安全中间件
-app.use(cors()); // 跨域中间件
+app.use(cors({
+    origin: '*',  // 或使用 '*' 允许所有域
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],  // 配置允许的请求方法
+    allowedHeaders: ['Content-Type', 'Authorization']  // 配置允许的请求头
+  }));
 app.options('*', cors());
 app.use(compression()); // 压缩中间件
 app.use(morgan('dev')); // 日志中间件

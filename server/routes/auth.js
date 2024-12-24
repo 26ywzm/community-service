@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 const { pool } = require('../db');
 const authenticateToken = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
@@ -29,7 +30,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 限制5MB
+    fileSize: 10 * 1024 * 1024 // 增加到10MB
   },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png/;
@@ -43,33 +44,48 @@ const upload = multer({
   }
 });
 
+// 图片压缩中间件
+const compressImage = async (req, res, next) => {
+  if (!req.file) {
+    return next();
+  }
+
+  try {
+    const filePath = req.file.path;
+    const compressedFilePath = path.join(
+      path.dirname(filePath),
+      'compressed-' + path.basename(filePath)
+    );
+
+    await sharp(filePath)
+      .resize(1000, 1000, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .jpeg({
+        quality: 80,
+        progressive: true
+      })
+      .toFile(compressedFilePath);
+
+    // 删除原始文件
+    fs.unlinkSync(filePath);
+    // 将压缩后的文件移动到原始文件位置
+    fs.renameSync(compressedFilePath, filePath);
+    
+    next();
+  } catch (error) {
+    console.error('图片压缩失败:', error);
+    next(error);
+  }
+};
+
 // 登录频率限制
 const loginLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 15分钟
   max: 5, // 限制5次尝试
   message: { message: '尝试次数过多，请15分钟后再试' }
 });
-
-// // 密码验证函数
-// const validatePassword = (password) => {
-//   const errors = [];
-//   if (password.length < 8) {
-//     errors.push('密码长度至少8个字符');
-//   }
-//   if (!/[A-Z]/.test(password)) {
-//     errors.push('密码必须包含至少一个大写字母');
-//   }
-//   if (!/[a-z]/.test(password)) {
-//     errors.push('密码必须包含至少一个小写字母');
-//   }
-//   if (!/[0-9]/.test(password)) {
-//     errors.push('密码必须包含至少一个数字');
-//   }
-//   return {
-//     isValid: errors.length === 0,
-//     errors: errors
-//   };
-// };
 
 // 邮箱验证函数
 const validateEmail = (email) => {
@@ -117,12 +133,6 @@ router.post('/register', async (req, res) => {
     if (!validateEmail(email)) {
       throw new Error('邮箱格式不正确');
     }
-
-    // 验证密码强度
-    // const passwordValidation = validatePassword(password);
-    // if (!passwordValidation.isValid) {
-    //   throw new Error('密码不符合要求: ' + passwordValidation.errors.join(', '));
-    // }
 
     // 检查用户名是否已存在
     const [existingUsername] = await connection.query(
@@ -332,12 +342,6 @@ router.put('/me', authenticateToken, async (req, res) => {
       const validPassword = await bcrypt.compare(currentPassword, user[0].password);
       if (!validPassword) {
         throw new Error('当前密码错误');
-      }
-
-      // 验证新密码强度
-      const passwordValidation = validatePassword(newPassword);
-      if (!passwordValidation.isValid) {
-        throw new Error('新密码不符合要求: ' + passwordValidation.errors.join(', '));
       }
 
       // 加密新密码
@@ -732,7 +736,7 @@ router.get('/news/:id', async (req, res) => {
 });
 
 // 发布文章
-router.post('/articles', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
+router.post('/articles', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
   const { title, content, category, image_url } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -778,7 +782,7 @@ router.get('/articles/:id', async (req, res) => {
 });
 
 // 修改文章
-router.put('/articles/:id', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
+router.put('/articles/:id', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
   const articleId = req.params.id;
   const { title, content, category, image_url } = req.body;
 
@@ -913,7 +917,7 @@ router.get('/canteen/menu', async (req, res) => {
 });
 
 // 添加菜品
-router.post('/canteen/menu', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
+router.post('/canteen/menu', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
   const { name, price, image_url, description } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -928,7 +932,7 @@ router.post('/canteen/menu', authenticateToken, verifyAdmin, upload.single('imag
 });
 
 // 更新菜品
-router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, upload.single('image'), async (req, res) => {
+router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
   const menuItemId = req.params.id;
   const { name, price, image_url, description } = req.body;
 

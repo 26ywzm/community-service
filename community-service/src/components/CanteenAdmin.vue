@@ -74,8 +74,72 @@ export default {
     this.fetchMenuItems(); // 加载菜品数据
   },
   methods: {
-    handleFileUpload(event) {
-      this.imageFile = event.target.files[0];
+    async compressImage(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // 如果图片大于 1000px，按比例缩小
+            const maxSize = 1000;
+            if (width > maxSize || height > maxSize) {
+              if (width > height) {
+                height = Math.round((height * maxSize) / width);
+                width = maxSize;
+              } else {
+                width = Math.round((width * maxSize) / height);
+                height = maxSize;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 压缩图片质量
+            canvas.toBlob((blob) => {
+              resolve(new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              }));
+            }, 'image/jpeg', 0.7); // 0.7 是压缩质量
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    },
+    async handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 检查文件类型
+      if (!file.type.startsWith('image/')) {
+        alert('请上传图片文件');
+        this.$refs.fileInput.value = '';
+        return;
+      }
+
+      // 检查文件大小（限制为 5MB）
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('图片大小不能超过 5MB，系统将自动压缩');
+      }
+
+      try {
+        // 压缩图片
+        const compressedFile = await this.compressImage(file);
+        this.imageFile = compressedFile;
+      } catch (error) {
+        console.error('图片压缩失败:', error);
+        alert('图片处理失败，请重试');
+        this.$refs.fileInput.value = '';
+      }
     },
     async fetchMenuItems() {
       try {
