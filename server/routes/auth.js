@@ -27,21 +27,8 @@ const storage = multer.diskStorage({
   }
 });
 
-// 错误处理中间件
-const uploadErrorHandler = (err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ message: '文件大小超过限制（最大50MB）' });
-    }
-  }
-  next(err);
-};
-
 const upload = multer({ 
   storage: storage,
-  limits: {
-    files: 1 // 一次只允许上传一个文件
-  },
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -52,7 +39,25 @@ const upload = multer({
       cb(new Error('只允许上传图片文件!'));
     }
   }
-});
+}).single('image');
+
+// 处理文件上传错误
+const handleUpload = (req, res, next) => {
+  upload(req, res, function(err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(413).json({ 
+        status: 'error',
+        message: '文件上传失败：' + err.message 
+      });
+    } else if (err) {
+      return res.status(400).json({ 
+        status: 'error',
+        message: err.message 
+      });
+    }
+    next();
+  });
+};
 
 // 图片压缩中间件
 const compressImage = async (req, res, next) => {
@@ -746,7 +751,7 @@ router.get('/news/:id', async (req, res) => {
 });
 
 // 发布文章
-router.post('/articles', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
+router.post('/articles', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
   const { title, content, category, image_url } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -792,7 +797,7 @@ router.get('/articles/:id', async (req, res) => {
 });
 
 // 修改文章
-router.put('/articles/:id', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
+router.put('/articles/:id', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
   const articleId = req.params.id;
   const { title, content, category, image_url } = req.body;
 
@@ -927,7 +932,7 @@ router.get('/canteen/menu', async (req, res) => {
 });
 
 // 添加菜品
-router.post('/canteen/menu', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
+router.post('/canteen/menu', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
   const { name, price, image_url, description } = req.body;
   const uploadedImageUrl = req.file ? `/uploads/${req.file.filename}` : image_url;
 
@@ -942,7 +947,7 @@ router.post('/canteen/menu', authenticateToken, verifyAdmin, upload.single('imag
 });
 
 // 更新菜品
-router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, upload.single('image'), compressImage, async (req, res) => {
+router.put('/canteen/menu/:id', authenticateToken, verifyAdmin, handleUpload, compressImage, async (req, res) => {
   const menuItemId = req.params.id;
   const { name, price, image_url, description } = req.body;
 

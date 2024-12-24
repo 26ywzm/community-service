@@ -32,36 +32,17 @@ const allowedOrigins = [
 app.use(express.json({limit: false}));
 app.use(express.urlencoded({limit: false, extended: true}));
 
-app.use(cors({
-    origin: function(origin, callback) {
-        // 允许没有 origin 的请求（比如移动端应用）
-        if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
-            callback(null, origin);
-        } else {
-            callback(new Error('不允许的来源'));
-        }
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range'],
-    credentials: true,
-    maxAge: 86400
-}));
-
-// 确保 OPTIONS 请求能正确响应
-app.options('*', cors());
-
-// 添加自定义 CORS 中间件作为备份
 app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
-        res.header('Access-Control-Allow-Origin', origin);
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        res.header('Access-Control-Allow-Credentials', 'true');
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Max-Age', '86400');
     }
+    
+    // 处理预检请求
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }

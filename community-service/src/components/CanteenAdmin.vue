@@ -162,28 +162,40 @@ export default {
       formData.append('image_url', this.newItem.image_url);
       formData.append('description', this.newItem.description);
       if (this.imageFile) {
-        formData.append('image', this.imageFile); // 添加文件到formData
+        formData.append('image', this.imageFile);
       }
 
       try {
-        await axios.post(`${API}/canteen/menu`, formData, {
+        const response = await axios.post(`${API}/canteen/menu`, formData, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             'Content-Type': 'multipart/form-data'
           },
           withCredentials: true,
+          maxBodyLength: Infinity,
           maxContentLength: Infinity,
-          maxBodyLength: Infinity
+          timeout: 60000, // 增加超时时间到60秒
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log('上传进度：', percentCompleted);
+          }
         });
+        
+        console.log('上传成功：', response.data);
         this.fetchMenuItems(); // 刷新菜单列表
         this.resetForm();
       } catch (error) {
-        handleApiError(error, {
-          suppressAuthError: true,
-          customErrorHandler: () => {
-            alert('添加菜品失败，请重试');
-          }
-        });
+        console.error('上传错误：', error);
+        if (error.response) {
+          console.error('错误响应：', error.response.data);
+          alert(error.response.data.message || '添加菜品失败，请重试');
+        } else if (error.request) {
+          console.error('请求错误：', error.request);
+          alert('网络连接失败，请检查网络后重试');
+        } else {
+          console.error('错误：', error.message);
+          alert('添加菜品失败，请重试');
+        }
       }
     },
     async deleteMenuItem(itemId) {
