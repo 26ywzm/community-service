@@ -72,7 +72,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
-const API = process.env.VUE_APP_API_URL + '/api/auth';
+const API = process.env.VUE_APP_API_URL;
 
 export default {
   data() {
