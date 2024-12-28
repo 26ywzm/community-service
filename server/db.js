@@ -108,7 +108,30 @@ async function initDatabase() {
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         `);
+        // 创建投票表
+        await connection.query(`
+          CREATE TABLE IF NOT EXISTS votes (
+            id INT AUTO_INCREMENT PRIMARY KEY,       -- 投票 ID
+            title VARCHAR(255) NOT NULL,             -- 投票标题
+            description TEXT,                        -- 投票描述
+            options TEXT NOT NULL,                   -- 投票选项，JSON格式存储
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 创建时间
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- 更新时间
+          )
+        `);
 
+        // 创建投票结果表
+        await connection.query(`
+          CREATE TABLE IF NOT EXISTS vote_results (
+            id INT AUTO_INCREMENT PRIMARY KEY,       -- 记录 ID
+            user_id INT NOT NULL,                     -- 关联用户
+            vote_id INT NOT NULL,                     -- 关联投票
+            vote_option VARCHAR(255),                 -- 用户选择的选项
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- 投票时间
+            FOREIGN KEY (user_id) REFERENCES users(id), -- 外键关联用户表
+            FOREIGN KEY (vote_id) REFERENCES votes(id)  -- 外键关联投票表
+          )
+        `);
         console.log('数据库表初始化成功！');
         connection.release();
     } catch (error) {

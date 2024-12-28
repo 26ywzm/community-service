@@ -13,6 +13,9 @@
         <router-link to="/feedback">
           <button class="action-button">意见反馈</button>
         </router-link>
+        <router-link to="/votelist">
+          <button class="action-button">管理投票</button>
+        </router-link>
       </div>
 
       <!-- 用户订单列表 -->
@@ -120,6 +123,9 @@
           </router-link>
           <router-link to="/managefeedback">
             <button class="admin-button">意见反馈</button>
+          </router-link>
+          <router-link to="/adminvotes">
+            <button class="admin-button">管理投票</button>
           </router-link>
         </div>
       </div>

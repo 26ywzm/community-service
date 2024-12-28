@@ -12,6 +12,9 @@ import OrderDetail from '@/components/OrderDetail.vue';
 import OrderManagement from '@/components/OrderManagement.vue';
 import SubmitFeedback from '@/components/SubmitFeedback.vue';
 import ManageFeedback from '@/components/ManageFeedback.vue';
+import AdminManageVotes from '@/components/AdminManageVotes.vue';
+import VoteDetail from '@/components/VoteDetail.vue';
+import VoteList from '@/components/VoteList.vue';
 
 // 创建路由
 const routes = [
@@ -28,6 +31,9 @@ const routes = [
   { path: '/canteen/orders', name: 'OrderManagement', component: OrderManagement },
   { path: '/feedback', name: 'SubmitFeedback', component: SubmitFeedback},
   { path: '/managefeedback', name: 'ManageeFedback', component: ManageFeedback},
+  { path: '/adminvotes', name: 'AdminManageVotes', component: AdminManageVotes},
+  { path: '/votedetail/:id', name: 'VoteDetail', component: VoteDetail},
+  { path: '/votelist', name: 'VoteList', component: VoteList},
 ];
 
 // 创建 router 实例
