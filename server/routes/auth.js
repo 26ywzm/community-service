@@ -1250,13 +1250,9 @@ router.put('/canteen/orders/:id', authenticateToken, verifyAdmin, async (req, re
     return res.status(403).json({ message: '无权访问' });
   }
 
-  // 验证状态值
-  const validStatuses = [0, 1, 2, 3];  // 0: pending, 1: confirmed, 2: completed, 3: cancelled
-  if (!validStatuses.includes(status)) {
-    return res.status(400).json({ 
-      message: '无效的状态值',
-      valid_statuses: validStatuses
-    });
+  // 验证状态值是否合法
+  if (![0, 1, 2, 3].includes(parseInt(status))) {
+    return res.status(400).json({ message: '无效的状态值' });
   }
 
   const connection = await pool.getConnection();
@@ -1282,7 +1278,7 @@ router.put('/canteen/orders/:id', authenticateToken, verifyAdmin, async (req, re
     // 更新订单状态
     await connection.query(
       'UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [status, orderId]
+      [parseInt(status), orderId]
     );
 
     await connection.commit();
@@ -1290,7 +1286,7 @@ router.put('/canteen/orders/:id', authenticateToken, verifyAdmin, async (req, re
     res.status(200).json({ 
       message: '订单状态已更新',
       order_id: orderId,
-      new_status: status
+      new_status: parseInt(status)
     });
 
   } catch (error) {
