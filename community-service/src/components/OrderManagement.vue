@@ -68,13 +68,11 @@
   </div>
 </template>
 
-
-
 <script>
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
-const API = process.env.VUE_APP_API_URL;  // 直接定义 API 地址
+const API = process.env.VUE_APP_API_URL + '/api/auth';
 
 export default {
   data() {
@@ -93,34 +91,40 @@ export default {
       }
     };
   },
-  mounted() {
-    this.fetchOrders(); // 加载所有订单
+  async mounted() {
+    await this.fetchOrders(); // 加载所有订单
   },
   methods: {
     async fetchOrders() {
       try {
         this.loading = true;
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
+          ElMessage.error('请先登录');
+          return;
+        }
+
         const response = await axios.get(`${API}/canteen/orders`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+            'Authorization': `Bearer ${token}`
           }
         });
-        console.log('获取到的订单数据:', response.data);
-        
-        // 处理订单数据
-        this.orders = response.data.orders.map(order => ({
-          ...order,
-          lastActionTime: 0,
-          items: order.items || [] // 确保 items 存在
-        }));
-        
-        // 更新分页信息
-        if (response.data.pagination) {
-          this.pagination = response.data.pagination;
+
+        if (response.data.orders) {
+          this.orders = response.data.orders.map(order => ({
+            ...order,
+            lastActionTime: 0,
+            items: order.items || [] // 确保 items 存在
+          }));
         }
       } catch (error) {
         console.error('获取订单列表失败:', error);
-        ElMessage.error('获取订单列表失败');
+        if (error.response?.status === 403) {
+          ElMessage.error('没有权限访问订单列表');
+        } else {
+          ElMessage.error(error.response?.data?.message || '获取订单列表失败');
+        }
       } finally {
         this.loading = false;
       }
