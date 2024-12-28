@@ -72,7 +72,12 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
-const API = process.env.VUE_APP_BASE_URL;
+// 根据环境设置基础 URL
+const baseURL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:3000'  // 开发环境
+  : process.env.VUE_APP_BASE_URL;  // 生产环境
+
+const API = baseURL + '/api/auth';
 
 export default {
   data() {
