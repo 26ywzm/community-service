@@ -74,7 +74,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
-const API = 'http://localhost:3000/api/auth';  // 直接定义 API 地址
+const API = process.env.VUE_APP_API_URL;  // 直接定义 API 地址
 
 export default {
   data() {
