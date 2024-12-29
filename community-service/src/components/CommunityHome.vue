@@ -28,7 +28,10 @@
       <h2>新闻列表</h2>
       <ul>
         <li v-for="news in newsList" :key="news.id">
-          <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">{{ news.title }}</router-link>
+          <router-link :to="{ name: 'NewsDetail', params: { id: news.id } }">
+            {{ news.title }}
+            <span class="news-date">{{ formatDate(news.created_at) }}</span>
+          </router-link>
         </li>
       </ul>
     </section>
@@ -142,6 +145,15 @@ export default {
       if (this.carouselImages.length > 0) {
         this.currentImage = (this.currentImage + this.carouselImages.length - 1) % this.carouselImages.length;
       }
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
     },
   },
 };

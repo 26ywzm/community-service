@@ -1,139 +1,163 @@
 <template>
-  <div class="discover">
-    <h2 class="title">发现</h2>
+  <div class="discover-container">
+    <div class="discover">
+      <header class="page-header">
+        <h1>发现</h1>
+      </header>
 
-    <!-- 检查用户是否已登录 -->
-    <div v-if="isLoggedIn">
-      <!-- 普通用户的功能 -->
-      <div v-if="!isAdmin && !isSuperAdmin" class="button-group">
-        <router-link to="/CanteenOrder">
-          <button class="action-button">社区食堂</button>
-        </router-link>
-        <button @click="fetchUserOrders" class="action-button">查看我的订单</button>
-        <router-link to="/feedback">
-          <button class="action-button">意见反馈</button>
-        </router-link>
-        <router-link to="/votelist">
-          <button class="action-button">管理投票</button>
-        </router-link>
-      </div>
+      <!-- 检查用户是否已登录 -->
+      <div v-if="isLoggedIn" class="content-wrapper">
+        <!-- 普通用户的功能 -->
+        <div v-if="!isAdmin && !isSuperAdmin" class="feature-grid">
+          <router-link to="/CanteenOrder" class="feature-card">
+            <div class="card-icon">🍽️</div>
+            <span class="card-title">社区食堂</span>
+          </router-link>
+          <div class="feature-card" @click="fetchUserOrders">
+            <div class="card-icon">📋</div>
+            <span class="card-title">我的订单</span>
+          </div>
+          <router-link to="/feedback" class="feature-card">
+            <div class="card-icon">💭</div>
+            <span class="card-title">意见反馈</span>
+          </router-link>
+          <router-link to="/votelist" class="feature-card">
+            <div class="card-icon">📊</div>
+            <span class="card-title">管理投票</span>
+          </router-link>
+        </div>
 
-      <!-- 用户订单列表 -->
-      <div v-if="orders.length > 0" class="orders-section">
-        <h3>我的订单</h3>
-        <ul class="order-list">
-          <li v-for="order in orders" :key="order.id" class="order-item">
-            <div class="order-info">
+        <!-- 用户订单列表 -->
+        <div v-if="orders.length > 0" class="orders-section">
+          <h2 class="section-title">我的订单</h2>
+          <div class="order-list">
+            <div v-for="order in orders" :key="order.id" class="order-card">
               <div class="order-header">
-                <span class="order-id">订单号: {{ order.id }}</span>
+                <span class="order-number">订单号: {{ order.id }}</span>
                 <span class="order-status" :class="order.status">
                   {{ getOrderStatusText(order.status) }}
                 </span>
               </div>
-              <div class="order-details">
-                <span class="order-price">总价: ¥{{ order.total_price }}</span>
-                <span class="order-date">{{ formatDate(order.created_at) }}</span>
-              </div>
-            </div>
-            <div class="order-actions">
-              <button @click="viewOrderDetails(order.id)" class="view-button">查看详情</button>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 管理员和超级管理员的功能 -->
-      <div v-if="isAdmin || isSuperAdmin">
-        <div class="button-group">
-          <router-link to="/articles/new">
-            <button class="admin-button">文章编写</button>
-          </router-link>
-          <button @click="openAdminPanel" class="admin-button" v-if="isAdmin || isSuperAdmin">管理模块</button>
-        </div>
-        
-        <el-dialog
-          v-model="dialogVisible"
-          title="管理模块"
-          width="70%"
-          :before-close="handleClose"
-          :close-on-click-modal="false"
-        >
-          <div class="admin-panel">
-            <h3>管理员和用户列表</h3>
-            <div v-loading="loading">
-              <div v-if="error" class="error-message">{{ error }}</div>
-              
-              <div v-else>
-                <h4>管理员列表</h4>
-                <div class="role-info" v-if="isAdmin && !isSuperAdmin">
-                  <el-alert
-                    title="提示：您可以查看用户列表，但只有超级管理员可以修改权限"
-                    type="info"
-                    :closable="false"
-                    show-icon
-                  />
+              <div class="order-body">
+                <div class="order-info">
+                  <div class="price">¥{{ order.total_price }}</div>
+                  <div class="date">{{ formatDate(order.created_at) }}</div>
                 </div>
-                <ul class="list">
-                  <li v-for="admin in admins" :key="admin.id" class="user-item">
-                    <div class="user-info">
-                      <span class="username">{{ admin.username }}</span>
-                      <span class="role-tag" :class="{ 'super': admin.role === 'super_admin' }">
-                        {{ admin.role === 'super_admin' ? '超级管理员' : '管理员' }}
-                      </span>
-                    </div>
-                    <div class="action-buttons" v-if="isSuperAdmin">
-                      <button @click="demoteUser(admin.id)" class="action-button" 
-                              v-if="admin.role !== 'super_admin'">降为用户</button>
-                      <button @click="deleteUser(admin.id)" class="close-button"
-                              v-if="admin.role !== 'super_admin'">删除</button>
-                    </div>
-                  </li>
-                </ul>
-
-                <h4>用户列表</h4>
-                <ul class="list">
-                  <li v-for="user in users" :key="user.id" class="user-item">
-                    <div class="user-info">
-                      <span class="username">{{ user.username }}</span>
-                      <span class="role-tag">用户</span>
-                    </div>
-                    <div class="action-buttons" v-if="isSuperAdmin">
-                      <button @click="promoteUser(user.id)" class="action-button">升为管理员</button>
-                      <button @click="deleteUser(user.id)" class="close-button">删除</button>
-                    </div>
-                  </li>
-                </ul>
+                <button @click="viewOrderDetails(order.id)" class="view-details-btn">
+                  查看详情
+                </button>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 管理员和超级管理员的功能 -->
+        <div v-if="isAdmin || isSuperAdmin" class="admin-section">
+          <div class="feature-grid">
+            <router-link to="/articles/new" class="feature-card admin">
+              <div class="card-icon">📝</div>
+              <span class="card-title">文章编写</span>
+            </router-link>
+            <div class="feature-card admin" @click="openAdminPanel">
+              <div class="card-icon">⚙️</div>
+              <span class="card-title">管理模块</span>
+            </div>
+            <router-link to="/canteenadmin" class="feature-card admin">
+              <div class="card-icon">🏪</div>
+              <span class="card-title">食堂管理</span>
+            </router-link>
+            <router-link to="/canteen/orders" class="feature-card admin">
+              <div class="card-icon">📦</div>
+              <span class="card-title">订单管理</span>
+            </router-link>
+            <router-link to="/managefeedback" class="feature-card admin">
+              <div class="card-icon">📢</div>
+              <span class="card-title">意见反馈</span>
+            </router-link>
+            <router-link to="/adminvotes" class="feature-card admin">
+              <div class="card-icon">🗳️</div>
+              <span class="card-title">管理投票</span>
+            </router-link>
+          </div>
+        </div>
+
+        <!-- 管理面板对话框 -->
+        <el-dialog
+          v-model="dialogVisible"
+          title="管理模块"
+          width="90%"
+          :fullscreen="isMobile"
+          :before-close="handleClose"
+          :close-on-click-modal="false"
+          class="admin-dialog"
+        >
+          <div class="admin-panel">
+            <div class="panel-header">
+              <h3>管理员和用户列表</h3>
+              <div v-if="isAdmin && !isSuperAdmin" class="role-info">
+                <el-alert
+                  title="提示：您可以查看用户列表，但只有超级管理员可以修改权限"
+                  type="info"
+                  :closable="false"
+                  show-icon
+                />
+              </div>
+            </div>
+
+            <div v-loading="loading" class="panel-content">
+              <div v-if="error" class="error-message">{{ error }}</div>
+              
+              <template v-else>
+                <div class="user-section">
+                  <h4>管理员列表</h4>
+                  <div class="user-list">
+                    <div v-for="admin in admins" :key="admin.id" class="user-card">
+                      <div class="user-info">
+                        <span class="username">{{ admin.username }}</span>
+                        <span class="role-badge" :class="{ 'super': admin.role === 'super_admin' }">
+                          {{ admin.role === 'super_admin' ? '超级管理员' : '管理员' }}
+                        </span>
+                      </div>
+                      <div class="user-actions" v-if="isSuperAdmin && admin.role !== 'super_admin'">
+                        <button @click="demoteUser(admin.id)" class="action-btn demote">降为用户</button>
+                        <button @click="deleteUser(admin.id)" class="action-btn delete">删除</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="user-section">
+                  <h4>用户列表</h4>
+                  <div class="user-list">
+                    <div v-for="user in users" :key="user.id" class="user-card">
+                      <div class="user-info">
+                        <span class="username">{{ user.username }}</span>
+                        <span class="role-badge">用户</span>
+                      </div>
+                      <div class="user-actions" v-if="isSuperAdmin">
+                        <button @click="promoteUser(user.id)" class="action-btn promote">升为管理员</button>
+                        <button @click="deleteUser(user.id)" class="action-btn delete">删除</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
           <template #footer>
-            <span class="dialog-footer">
-              <el-button @click="closeDialog">关闭</el-button>
-            </span>
+            <div class="dialog-footer">
+              <el-button @click="closeDialog" type="primary">关闭</el-button>
+            </div>
           </template>
         </el-dialog>
-
-        <!-- 其他管理员功能 -->
-        <div class="button-group">
-          <router-link to="/canteenadmin">
-            <button class="admin-button">食堂管理</button>
-          </router-link>
-          <router-link to="/canteen/orders">
-            <button class="admin-button">订单管理</button>
-          </router-link>
-          <router-link to="/managefeedback">
-            <button class="admin-button">意见反馈</button>
-          </router-link>
-          <router-link to="/adminvotes">
-            <button class="admin-button">管理投票</button>
-          </router-link>
-        </div>
       </div>
-    </div>
 
-    <!-- 未登录用户 -->
-    <div v-else>
-      <p>请登录以查看内容。</p>
+      <!-- 未登录用户 -->
+      <div v-else class="login-prompt">
+        <div class="prompt-icon">🔒</div>
+        <p>请登录以查看内容</p>
+        <router-link to="/login" class="login-btn">立即登录</router-link>
+      </div>
     </div>
   </div>
 </template>
@@ -155,7 +179,8 @@ export default {
       orders: [],
       verificationInterval: null,
       loading: false,
-      error: null
+      error: null,
+      isMobile: window.innerWidth <= 768
     };
   },
   computed: {
@@ -175,13 +200,18 @@ export default {
     if (this.isLoggedIn) {
       this.startVerification();
     }
+    window.addEventListener('resize', this.handleResize);
   },
   beforeUnmount() {
     if (this.verificationInterval) {
       clearInterval(this.verificationInterval);
     }
+    window.removeEventListener('resize', this.handleResize);
   },
   methods: {
+    handleResize() {
+      this.isMobile = window.innerWidth <= 768;
+    },
     startVerification() {
       if (this.verificationInterval) {
         clearInterval(this.verificationInterval);
@@ -368,125 +398,64 @@ export default {
 </script>
 
 <style scoped>
-.discover {
+.discover-container {
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px;
+}
+
+.discover {
   background-color: #f9f9f9;
   border-radius: 8px;
-}
-
-.role-info {
-  margin: 10px 0;
-  padding: 10px;
-}
-
-.error-message {
-  color: #f56c6c;
-  margin: 10px 0;
-  padding: 10px;
-  background-color: #fef0f0;
-  border-radius: 4px;
-}
-
-.user-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  margin: 8px 0;
-  background-color: white;
-  border-radius: 6px;
+  padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.page-header {
+  margin-bottom: 20px;
 }
 
-.username {
+.page-header h1 {
   font-weight: 500;
   color: #303133;
 }
 
-.role-tag {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  background-color: #e1f3d8;
-  color: #67c23a;
-}
-
-.role-tag.super {
-  background-color: #ffd04b;
-  color: #b88230;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.title {
-  color: #303133;
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
   margin-bottom: 20px;
 }
 
-.button-group {
-  margin: 15px 0;
-  display: flex;
-  gap: 10px;
+.feature-card {
+  background-color: white;
+  border-radius: 4px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
-.admin-button {
-  padding: 10px 20px;
+.feature-card:hover {
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+}
+
+.feature-card.admin {
   background-color: #409eff;
   color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
 }
 
-.admin-button:hover {
+.feature-card.admin:hover {
   background-color: #66b1ff;
 }
 
-.action-button {
-  padding: 5px 10px;
-  background-color: #67c23a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
+.card-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
 }
 
-.action-button:hover {
-  background-color: #85ce61;
-}
-
-.close-button {
-  padding: 5px 10px;
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.close-button:hover {
-  background-color: #f78989;
-}
-
-.list {
-  list-style: none;
-  padding: 0;
-}
-
-.admin-panel {
-  padding: 20px;
+.card-title {
+  font-weight: 500;
+  color: #303133;
 }
 
 .orders-section {
@@ -502,7 +471,7 @@ export default {
   padding: 0;
 }
 
-.order-item {
+.order-card {
   border: 1px solid #ebeef5;
   border-radius: 4px;
   padding: 15px;
@@ -513,12 +482,8 @@ export default {
   transition: all 0.3s;
 }
 
-.order-item:hover {
+.order-card:hover {
   box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
-}
-
-.order-info {
-  flex: 1;
 }
 
 .order-header {
@@ -527,7 +492,7 @@ export default {
   margin-bottom: 8px;
 }
 
-.order-id {
+.order-number {
   font-weight: 500;
   color: #303133;
   margin-right: 15px;
@@ -554,27 +519,29 @@ export default {
   color: #f56c6c;
 }
 
-.order-details {
+.order-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-info {
   display: flex;
   gap: 15px;
   color: #606266;
   font-size: 14px;
 }
 
-.order-price {
+.price {
   color: #f56c6c;
   font-weight: 500;
 }
 
-.order-date {
+.date {
   color: #909399;
 }
 
-.order-actions {
-  margin-left: 15px;
-}
-
-.view-button {
+.view-details-btn {
   padding: 5px 15px;
   background-color: #409eff;
   color: white;
@@ -584,7 +551,346 @@ export default {
   transition: all 0.3s;
 }
 
-.view-button:hover {
+.view-details-btn:hover {
   background-color: #66b1ff;
+}
+
+.admin-section {
+  margin-top: 20px;
+}
+
+.admin-dialog {
+  max-width: 90%;
+  margin: 0 auto;
+}
+
+.admin-panel {
+  padding: 20px;
+}
+
+.panel-header {
+  margin-bottom: 20px;
+}
+
+.panel-header h3 {
+  font-weight: 500;
+  color: #303133;
+}
+
+.role-info {
+  margin: 10px 0;
+  padding: 10px;
+}
+
+.error-message {
+  color: #f56c6c;
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #fef0f0;
+  border-radius: 4px;
+}
+
+.user-section {
+  margin-bottom: 20px;
+}
+
+.user-list {
+  list-style: none;
+  padding: 0;
+}
+
+.user-card {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s;
+}
+
+.user-card:hover {
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.username {
+  font-weight: 500;
+  color: #303133;
+}
+
+.role-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background-color: #e1f3d8;
+  color: #67c23a;
+}
+
+.role-badge.super {
+  background-color: #ffd04b;
+  color: #b88230;
+}
+
+.user-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-btn.demote {
+  background-color: #e6a23c;
+  color: white;
+}
+
+.action-btn.demote:hover {
+  background-color: #f78989;
+}
+
+.action-btn.promote {
+  background-color: #67c23a;
+  color: white;
+}
+
+.action-btn.promote:hover {
+  background-color: #85ce61;
+}
+
+.action-btn.delete {
+  background-color: #f56c6c;
+  color: white;
+}
+
+.action-btn.delete:hover {
+  background-color: #f78989;
+}
+
+.dialog-footer {
+  margin-top: 20px;
+  text-align: right;
+}
+
+.login-prompt {
+  text-align: center;
+  padding: 20px;
+}
+
+.prompt-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+
+.login-btn {
+  padding: 10px 20px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.login-btn:hover {
+  background-color: #66b1ff;
+}
+
+/* 响应式设计 */
+@media screen and (max-width: 1200px) {
+  .discover-container {
+    padding: 15px;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media screen and (max-width: 992px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .order-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .view-details-btn {
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .discover-container {
+    padding: 10px;
+  }
+
+  .discover {
+    padding: 15px;
+  }
+
+  .page-header h1 {
+    font-size: 24px;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .feature-card {
+    padding: 15px;
+  }
+
+  .card-icon {
+    font-size: 20px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .orders-section {
+    padding: 15px;
+  }
+
+  .order-card {
+    padding: 12px;
+  }
+
+  .order-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .order-status {
+    align-self: flex-start;
+  }
+
+  .order-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .user-card {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .user-info {
+    flex-direction: column;
+  }
+
+  .user-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .action-btn {
+    flex: 1;
+    max-width: 120px;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-icon {
+    font-size: 24px;
+  }
+
+  .card-title {
+    font-size: 16px;
+  }
+
+  .order-number,
+  .order-status,
+  .price,
+  .date {
+    font-size: 14px;
+  }
+
+  .view-details-btn {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+
+  .user-card {
+    padding: 10px;
+  }
+
+  .role-badge {
+    font-size: 11px;
+  }
+
+  .action-btn {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+  .discover {
+    background-color: #1a1a1a;
+  }
+
+  .feature-card {
+    background-color: #2d2d2d;
+  }
+
+  .feature-card .card-title {
+    color: #ffffff;
+  }
+
+  .feature-card.admin {
+    background-color: #1867c0;
+  }
+
+  .order-card,
+  .user-card {
+    background-color: #2d2d2d;
+    border-color: #3d3d3d;
+  }
+
+  .order-number,
+  .username {
+    color: #ffffff;
+  }
+
+  .date,
+  .order-info {
+    color: #b0b0b0;
+  }
+
+  .role-badge {
+    background-color: #2d2d2d;
+  }
+
+  .role-badge.super {
+    background-color: #4a3000;
+    color: #ffd04b;
+  }
+
+  .login-prompt {
+    color: #ffffff;
+  }
 }
 </style>
