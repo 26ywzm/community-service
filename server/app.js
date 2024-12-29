@@ -37,10 +37,12 @@ const corsOptions = {
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma'],
+    exposedHeaders: ['Content-Length', 'Content-Type'],
     credentials: true,  // 允许发送 cookie
     preflightContinue: false,  // 不传递预检请求到下一个路由
-    optionsSuccessStatus: 200
+    optionsSuccessStatus: 200,
+    maxAge: 86400  // 预检请求的结果可以缓存24小时
 };
 
 // 应用 CORS 中间件

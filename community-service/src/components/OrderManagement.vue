@@ -116,13 +116,11 @@ export default {
           return;
         }
 
-        // 添加时间戳防止缓存
+        // 使用时间戳防止缓存
         const timestamp = new Date().getTime();
         const response = await axios.get(`${API_URL}/canteen/orders?_t=${timestamp}`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'Authorization': `Bearer ${token}`
           }
         });
 
