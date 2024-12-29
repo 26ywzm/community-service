@@ -72,12 +72,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
-// 根据环境设置基础 URL
-const baseURL = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:3000'  // 开发环境
-  : process.env.VUE_APP_BASE_URL;  // 生产环境
-
-const API = baseURL + '/api/auth';
+const API_URL = process.env.VUE_APP_API_URL;
 
 export default {
   data() {
@@ -110,7 +105,7 @@ export default {
           return;
         }
 
-        const response = await axios.get(`${API}/canteen/orders`, {
+        const response = await axios.get(`${API_URL}/canteen/orders`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -178,7 +173,7 @@ export default {
       try {
         console.log('Updating order status:', { orderId: order.id, status: status });
         await axios.put(
-          `${API}/canteen/orders/${order.id}`, 
+          `${API_URL}/canteen/orders/${order.id}`, 
           { status }, 
           {
             headers: {
@@ -204,7 +199,7 @@ export default {
           return;
         }
         
-        await axios.delete(`${API}/canteen/orders/${order.id}`, {
+        await axios.delete(`${API_URL}/canteen/orders/${order.id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
