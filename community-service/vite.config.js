@@ -24,8 +24,12 @@ export default defineConfig({
           'vant-ui': ['vant'],
           'element-plus-ui': ['element-plus'],
         },
+        entryFileNames: '[name].[hash].js',
+        chunkFileNames: '[name].[hash].js',
+        assetFileNames: '[name].[hash].[ext]'
       },
     },
+    sourcemap: true,
   },
   define: {
     '__VUE_PROD_HYDRATION_MISMATCH_DETAILS__': false,
