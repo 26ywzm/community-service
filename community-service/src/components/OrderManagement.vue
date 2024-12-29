@@ -73,10 +73,19 @@ import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
 const API_URL = process.env.VUE_APP_API_URL;
-console.log('Current API_URL:', API_URL);  // 添加调试信息
-console.log('Current NODE_ENV:', process.env.NODE_ENV);  // 查看当前环境
+console.log('Current API_URL:', API_URL);
 
 export default {
+  created() {
+    // 强制清除该页面的缓存
+    if (window.caches) {
+      caches.keys().then(names => {
+        names.forEach(name => {
+          caches.delete(name);
+        });
+      });
+    }
+  },
   data() {
     return {
       orders: [], // 存储所有订单信息
@@ -107,9 +116,13 @@ export default {
           return;
         }
 
-        const response = await axios.get(`${API_URL}/canteen/orders`, {
+        // 添加时间戳防止缓存
+        const timestamp = new Date().getTime();
+        const response = await axios.get(`${API_URL}/canteen/orders?_t=${timestamp}`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
         });
 
