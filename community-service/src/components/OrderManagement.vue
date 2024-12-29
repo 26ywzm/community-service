@@ -73,6 +73,8 @@ import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
 const API_URL = process.env.VUE_APP_API_URL;
+console.log('Current API_URL:', API_URL);  // 添加调试信息
+console.log('Current NODE_ENV:', process.env.NODE_ENV);  // 查看当前环境
 
 export default {
   data() {
