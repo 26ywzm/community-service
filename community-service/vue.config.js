@@ -9,6 +9,8 @@ module.exports = defineConfig({
     client: {
       webSocketURL: 'wss://sheqv.26ywzm.icu/ws', 
     },
+    compress: true, // 启用 gzip 压缩
+    hot: true, // 热更新
   },
   
   // 生产环境配置
@@ -35,6 +37,15 @@ module.exports = defineConfig({
             reuseExistingChunk: true
           }
         }
+      },
+      removeAvailableModules: false,
+      removeEmptyChunks: false,
+      splitChunks: false,
+    },
+    cache: {
+      type: 'filesystem',
+      buildDependencies: {
+        config: [__filename]
       }
     },
     plugins: [
@@ -47,7 +58,14 @@ module.exports = defineConfig({
   },
   
   chainWebpack: config => {
-    config.optimization.minimize(true);
+    config.optimization.minimize(false); // 开发环境不压缩
+    
+    if (process.env.NODE_ENV === 'development') {
+      config.optimization.removeAvailableModules(false)
+      config.optimization.removeEmptyChunks(false)
+      config.optimization.splitChunks(false)
+    }
+    
     // 移除 prefetch 插件
     config.plugins.delete('prefetch');
     // 移除 preload 插件
