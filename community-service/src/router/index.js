@@ -30,7 +30,7 @@ const routes = [
   { path: '/order/:orderId',name: 'OrderDetail',component: OrderDetail,},
   { path: '/canteen/orders', name: 'OrderManagement', component: OrderManagement },
   { path: '/feedback', name: 'SubmitFeedback', component: SubmitFeedback},
-  { path: '/managefeedback', name: 'ManageeFedback', component: ManageFeedback},
+  { path: '/managefeedback', name: 'ManageFeedback', component: ManageFeedback},
   { path: '/adminvotes', name: 'AdminManageVotes', component: AdminManageVotes},
   { path: '/votedetail/:id', name: 'VoteDetail', component: VoteDetail},
   { path: '/votelist', name: 'VoteList', component: VoteList},

@@ -51,7 +51,7 @@
           </div>
 
           <div class="info-section">
-            <h2>{{ userInfo.username }}</h2>
+            <h2 style="text-align: center;">{{ userInfo.username }}</h2>
             <div class="info-item">
               <span class="info-icon">📧</span>
               <span class="info-label">邮箱：</span>

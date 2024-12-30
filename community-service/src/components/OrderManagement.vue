@@ -5,7 +5,7 @@
     <div v-else>
       <!-- 订单卡片布局 -->
       <div class="order-cards">
-        <div v-for="order in orders" :key="order.id" class="order-card">
+        <div v-for="(order, index) in orders" :key="index" class="order-card">
           <h3>订单ID: {{ order.id }}</h3>
           <div class="order-info">
             <div class="user-info">
@@ -13,7 +13,7 @@
               <div class="email">{{ order.email }}</div>
             </div>
             <div class="order-items">
-              <div v-for="item in order.items" :key="item.menu_item_id" class="order-item">
+              <div v-for="(item, itemIndex) in order.items" :key="itemIndex" class="order-item">
                 <span class="item-name">{{ item.name }}</span>
                 <div class="item-details">
                   <span>数量: {{ item.quantity }}</span>
@@ -34,17 +34,17 @@
             </div>
             <div class="order-actions">
               <button 
-                v-if="parseInt(order.status) === 0" 
+                v-if="order.status === 0" 
                 class="btn-confirm"
                 @click="handleButtonClick(order)"
               >开始处理</button>
               <button 
-                v-if="parseInt(order.status) === 1" 
+                v-if="order.status === 1" 
                 class="btn-complete"
                 @click="handleButtonClick(order)"
               >完成订单</button>
               <button 
-                v-if="parseInt(order.status) === 2" 
+                v-if="order.status === 2" 
                 class="btn-delete"
                 @click="handleDeleteOrder(order)"
               >删除订单</button>
@@ -77,14 +77,7 @@ console.log('Current API_URL:', API_URL);
 
 export default {
   created() {
-    // 强制清除该页面的缓存
-    if (window.caches) {
-      caches.keys().then(names => {
-        names.forEach(name => {
-          caches.delete(name);
-        });
-      });
-    }
+    this.fetchOrders();
   },
   data() {
     return {
@@ -102,9 +95,6 @@ export default {
       }
     };
   },
-  async mounted() {
-    await this.fetchOrders(); // 加载所有订单
-  },
   methods: {
     async fetchOrders() {
       try {
@@ -116,20 +106,24 @@ export default {
           return;
         }
 
-        // 使用时间戳防止缓存
-        const timestamp = new Date().getTime();
-        const response = await axios.get(`${API_URL}/canteen/orders?_t=${timestamp}`, {
+        const response = await axios.get(`${API_URL}/canteen/orders`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
           }
         });
 
         if (response.data.orders) {
-          this.orders = response.data.orders.map(order => ({
-            ...order,
-            lastActionTime: 0,
-            items: order.items || [] // 确保 items 存在
-          }));
+          this.orders = response.data.orders.map(order => {
+            const total = (order.items || []).reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            return {
+              ...order,
+              total_price: total,
+              lastActionTime: 0,
+              items: order.items || []
+            };
+          });
         }
       } catch (error) {
         console.error('获取订单列表失败:', error);

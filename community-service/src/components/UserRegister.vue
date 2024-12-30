@@ -206,7 +206,7 @@ export default {
 }
 
 .register-page {
-  min-height: 100vh;
+  min-height: 86vh;
   display: flex;
   justify-content: center;
   align-items: center;
