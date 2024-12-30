@@ -1,5 +1,4 @@
 const { defineConfig } = require('@vue/cli-service')
-const CompressionPlugin = require('compression-webpack-plugin')
 
 module.exports = defineConfig({
   transpileDependencies: true,
@@ -10,11 +9,7 @@ module.exports = defineConfig({
       webSocketURL: 'wss://sheqv.26ywzm.icu/ws', 
     },
     compress: true, // 启用 gzip 压缩
-    hot: true, // 热更新
   },
-  
-  // 生产环境配置
-  productionSourceMap: false, // 关闭生产环境的 source map
   
   configureWebpack: {
     optimization: {
@@ -23,7 +18,7 @@ module.exports = defineConfig({
         maxInitialRequests: 5,
         minSize: 20000,
         cacheGroups: {
-          vendors: {
+          defaultVendors: {
             name: 'chunk-vendors',
             test: /[\\/]node_modules[\\/]/,
             priority: -10,
@@ -37,38 +32,8 @@ module.exports = defineConfig({
             reuseExistingChunk: true
           }
         }
-      },
-      removeAvailableModules: false,
-      removeEmptyChunks: false,
-      splitChunks: false,
-    },
-    cache: {
-      type: 'filesystem',
-      buildDependencies: {
-        config: [__filename]
       }
     },
-    plugins: [
-      new CompressionPlugin({
-        test: /\.js$|\.html$|\.css$|\.jpg$|\.jpeg$|\.png/, // 需要压缩的文件类型
-        threshold: 10240, // 归档需要进行压缩的文件大小最小值，这里表示大于10K的文件才会被压缩
-        deleteOriginalAssets: false // 是否删除原文件
-      })
-    ]
-  },
-  
-  chainWebpack: config => {
-    config.optimization.minimize(false); // 开发环境不压缩
-    
-    if (process.env.NODE_ENV === 'development') {
-      config.optimization.removeAvailableModules(false)
-      config.optimization.removeEmptyChunks(false)
-      config.optimization.splitChunks(false)
-    }
-    
-    // 移除 prefetch 插件
-    config.plugins.delete('prefetch');
-    // 移除 preload 插件
-    config.plugins.delete('preload');
+    cache: true
   }
 })
