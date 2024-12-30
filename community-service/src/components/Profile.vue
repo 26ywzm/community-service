@@ -543,7 +543,7 @@ export default {
   }
 
   .auth-button {
-    width: 100%;
+    width: 74%;
   }
 }
 
